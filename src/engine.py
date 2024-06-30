@@ -13,7 +13,7 @@ TURN_SPEED = 5
 
 
 class Camera:
-    def __init__(self, pos = [3,1,1], direction = 180, pitch = 0, fov=60, up=[0,0,1]):
+    def __init__(self, pos = [3,0,0], direction = 180, pitch = 0, fov=60, up=[0,0,-1]):
         # vec3 for point of reference
         self.pos = np.array(pos)
         # rotation about z axis in degrees
@@ -21,10 +21,11 @@ class Camera:
         # vec3 for direction the view is facing, normalized direction vector
         self.facing = np.array([round(math.cos(math.radians(direction)),2),round(math.sin(math.radians(direction)),2),0])
 
-        
         # float for Field of View in radians
         self.fov = fov
         self.up = np.array(up)
+
+        
 
         print(f"FACING: {self.facing[0]} {self.facing[1]}")
 
@@ -45,6 +46,16 @@ class Triangle:
     def __init__(self, points=[]):
         self.points = points
         self.color = (random.randint(0,255),random.randint(0,255),random.randint(0,255))
+
+        self.dist_to_camera = 0
+        self.middle = (np.array(self.points[0]) + np.array(self.points[1]) + np.array(self.points[2]))/3.0
+    
+    def update_dist_to_camera(self,camera_coord):
+        self.dist_to_camera = np.linalg.norm(self.middle - camera_coord)
+
+    def get_center(self):
+        self.middle = (np.array(self.points[0]) + np.array(self.points[1]) + np.array(self.points[2]))/3.0
+        return self.middle
 
 class World:
     def __init__(self):
@@ -71,51 +82,48 @@ class Engine:
         
         # test objects to add to the world
         # triangle located at the origin in then y-z plane
-        triangle20 = Triangle([
-            (-5,0,-2),
-            (-5,1,0),
-            (-5,-1,0)])
         
-        triangle30 = Triangle([
-            (-5,2,-2),
-            (-5,3,0),
-            (-5,1,0)])
-        triangle40 = Triangle([
-            (-5,-2,-2),
-            (-5,-1,0),
-            (-5,-3,0)])
         
         triangle2 = Triangle([
-            (-1,0,-2),
+            (0,0,-2),
             (-1,1,0),
             (-1,-1,0)])
-        
         triangle3 = Triangle([
-            (-1,2,-2),
-            (-1,3,0),
-            (-1,1,0)])
-        triangle4 = Triangle([
-            (-1,-2,-2),
             (-1,-1,0),
-            (-1,-3,0)])
-        
-        triangle = Triangle([
+            (1,-1,0),
+            (0,0,-2)])
+        triangle4 = Triangle([
             (0,0,-2),
-            (0,1,0),
-            (0,-1,0)])
+            (1,1,0),
+            (1,-1,0)])
+        triangle5 = Triangle([
+            (0,0,2),
+            (-1,1,0),
+            (-1,-1,0)])
+        triangle6 = Triangle([
+            (-1,-1,0),
+            (1,-1,0),
+            (0,0,2)])
+        triangle7 = Triangle([
+            (0,0,2),
+            (1,1,0),
+            (1,-1,0)])
+        triangle8 = Triangle([
+            (0,0,2),
+            (1,1,0),
+            (-1,1,0)])
         
-        triangle = Triangle([
-            (2,-3,0),
-            (3,-3,-2),
-            (4,-3,0)])
         
-        self.world.add_triangle(triangle20)
-        self.world.add_triangle(triangle30)
-        self.world.add_triangle(triangle40)
+        
+        
         self.world.add_triangle(triangle2)
         self.world.add_triangle(triangle3)
         self.world.add_triangle(triangle4)
-        self.world.add_triangle(triangle)
+        self.world.add_triangle(triangle5)
+        self.world.add_triangle(triangle6)
+        self.world.add_triangle(triangle7)
+        self.world.add_triangle(triangle8)
+        
         
 
 
@@ -186,11 +194,11 @@ class Engine:
         if direction_of_x == False:
             final_x_component = final_x_component * -1
 
-        direction_of_y = np.dot(y_component, self.camera.up)
+        direction_of_y = np.dot(y_component, self.camera.up) > 0
 
         final_y_component = np.linalg.norm(y_component)
 
-        if direction_of_y == False:
+        if direction_of_y == True:
             final_y_component = final_y_component * -1
 
         
@@ -246,8 +254,13 @@ class Engine:
         
         pygame.draw.circle(self.screen,(255,0,0),(final_point[0],final_point[1]),10)
 
-
         for triangle in self.world.triangles:
+            triangle.update_dist_to_camera(self.camera.pos)
+
+        # sort triangles by distance to camera
+        depth_buffer_triangles = sorted(self.world.triangles, key=lambda x: x.dist_to_camera, reverse=True)
+
+        for triangle in depth_buffer_triangles:
 
             new_points = []
 
@@ -260,6 +273,12 @@ class Engine:
 
             
             pygame.draw.polygon(self.screen,triangle.color,new_points)
+
+            triangle_center = triangle.get_center()
+
+            new_center = (self.find_camera_rel_point(triangle_center) + move_to_center_screen)[0]
+
+            #pygame.draw.circle(self.screen,(0,255,0),(new_center[0],new_center[1]),1)
 
 
         pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(WIDTH/2-1,HEIGHT/2-10,2,20))
@@ -304,11 +323,11 @@ class Engine:
                         elif event.key == pygame.K_LEFT:
                             # Handle left key press
                             print("Left arrow key pressed")
-                            self.camera.pos = self.camera.pos + np.array([0,-CAMERA_MOVE_SPEED,0])
+                            self.camera.pos = self.camera.pos + np.array([0,CAMERA_MOVE_SPEED,0])
                         elif event.key == pygame.K_RIGHT:
                             # Handle right key press
                             print("Right arrow key pressed")
-                            self.camera.pos = self.camera.pos + np.array([0,CAMERA_MOVE_SPEED,0])
+                            self.camera.pos = self.camera.pos + np.array([0,-CAMERA_MOVE_SPEED,0])
                         elif event.key == pygame.K_PERIOD:
                             # Handle left key press
                             print("Period key pressed")
