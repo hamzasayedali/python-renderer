@@ -7,6 +7,6 @@ def angle_between_vectors_degrees(v1, v2, norm=[0,0,1]):
     det = np.dot(norm,np.cross(v1,v2))
 
     angle_rad = math.atan2(dot_prod,det)
-    angle_deg = math.degrees(angle_rad) - 90
+    angle_deg = math.degrees(angle_rad) + 90
     
     return angle_deg

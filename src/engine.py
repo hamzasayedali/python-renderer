@@ -6,6 +6,8 @@ import math
 
 import helpers
 
+import cube_model
+
 # Constants
 WIDTH = 640
 HEIGHT = 640
@@ -15,27 +17,46 @@ TURN_SPEED = 5
 
 
 class Camera:
-    def __init__(self, pos = [3,0,0], direction = 180, pitch = 0, fov=60, up=[0,0,-1]):
+    def __init__(self, pos = [3.0,0.0,0.0], direction = 180, pitch = 0, fov=60, up=[0,0,-1]):
         # vec3 for point of reference
         self.pos = np.array(pos)
         # rotation about z axis in degrees
         self.direction = direction
         # vec3 for direction the view is facing, normalized direction vector
-        self.facing = np.array([round(math.cos(math.radians(direction)),2),round(math.sin(math.radians(direction)),2),0])
+        self.facing = np.array([round(math.cos(math.radians(direction)),5),round(math.sin(math.radians(direction)),5),0])
 
         # float for Field of View in radians
         self.fov = fov
         self.up = np.array(up)
 
-        
+        self.is_orbiting = False
+        self.orbit_distance = 5
 
         print(f"FACING: {self.facing[0]} {self.facing[1]}")
 
+    def move(self, direction):
+        if direction == "FORWARD":
+            movement_vector = self.facing/np.linalg.norm(self.facing) * CAMERA_MOVE_SPEED
+
+            self.pos += np.array(movement_vector)
+        
+        if direction == "BACKWARD":
+            movement_vector = self.facing/np.linalg.norm(self.facing) * CAMERA_MOVE_SPEED
+
+            self.pos -= np.array(movement_vector)
+
     def set_direction(self, degrees):
         self.direction = degrees
-        self.facing = np.array([round(math.cos(math.radians(self.direction)),2),round(math.sin(math.radians(self.direction)),2),0])
+        self.facing = np.array([round(math.cos(math.radians(self.direction)),5),round(math.sin(math.radians(self.direction)),5),0])
 
-    
+    def toggle_orbit(self):
+        self.is_orbiting = not self.is_orbiting
+
+        if self.is_orbiting:
+            self.orbit_distance = np.linalg.norm(self.pos - np.array([0,0,0]))
+
+        
+            
 
     def turn(self, direction):
         if direction == "LEFT":
@@ -46,16 +67,43 @@ class Camera:
             self.set_direction(self.direction + TURN_SPEED)
             print("turn right")
 
+    
+    def update(self):
         
+        if self.is_orbiting:
+            self.orbit([0,0,0])
 
     def orbit(self, orbit_point):
         # face the origin
+
+        # do the camera movement
+
+        pos_in_xy0 = np.array([self.pos[0],self.pos[1],0])
+        #print(f"POS IN XY TO START {pos_in_xy0}")
+
+        theta = math.pi / 60
+        rotation_matrix = np.array([[math.cos(theta), -math.sin(theta), 0],
+                           [math.sin(theta), math.cos(theta), 0],
+                           [0,0,1]])
+        
+        #print(rotation_matrix)
+        
+        new_pos_in_xy = np.matmul(pos_in_xy0, rotation_matrix)
+
+        #print(new_pos_in_xy)
+
+        self.pos = np.array([new_pos_in_xy[0], new_pos_in_xy[1], self.pos[2]])
+        #print(f"POSITION: {self.pos} END")
 
         direction_to_orbit = self.pos - np.array(orbit_point)
 
         angle = helpers.angle_between_vectors_degrees([direction_to_orbit[0],direction_to_orbit[1],0],[1,0,0])
 
         self.set_direction(angle)
+
+        
+
+
 
         
         
@@ -81,7 +129,19 @@ class Triangle:
         self.middle = (np.array(self.points[0]) + np.array(self.points[1]) + np.array(self.points[2]))/3.0
         return self.middle
     
-    def get_lighted_color(self, sun_direction):
+    def get_lighted_color(self, sun_position, camera_position):
+
+        #figure out if I'm between the triangle and the sun
+
+        
+
+
+        sun_direction = self.get_center() - sun_position
+        
+        
+        
+
+        
 
         #compute the projection of the normal of the triangle to the direction of the sun. Parallel means full color, perpendicular means duller color
         v1 = np.array(self.points[1]) - np.array(self.points[0])
@@ -95,13 +155,22 @@ class Triangle:
         normalized_sun = sun_direction/np.linalg.norm(sun_direction)
         
 
+        camera_to_object = self.get_center() - camera_position
 
-        light_level = abs(np.dot(normalized_sun,normalized_normal)) * 0.9 + 0.1
+        light_side = np.dot(camera_to_object,normalized_normal) > 0
+
+        light_add = 1
+        if not light_side:
+            light_add = -1
+
+        light_level = ((np.dot(normalized_sun,normalized_normal) * light_add + 1) / 2) * 0.9 + 0.1
 
         
 
         adjusted_color = np.array(self.base_color) * light_level
         return (adjusted_color[0],adjusted_color[1],adjusted_color[2])
+    
+        #return self.color
 
 
 
@@ -110,10 +179,27 @@ class World:
     def __init__(self):
         self.triangles = []
         self.origin = np.array([0,0,0])
-        self.sun_direction = np.array([4,0,1])
+        self.sun_direction = np.array([10,100,-10])
+
+        self.is_sunrising = False
+        self.sun_velocity = 10
 
     def add_triangle(self, triangle):
         self.triangles.append(triangle)
+
+    def toggle_sunrising(self):
+        self.is_sunrising = not self.is_sunrising
+
+    def update(self):
+        if self.is_sunrising:
+            self.sun_direction = np.array([
+                self.sun_direction[0],
+                self.sun_direction[1],
+                self.sun_direction[2] + self.sun_velocity])
+            
+            if abs(self.sun_direction[2]) > 100:
+                self.sun_velocity *= -1
+
 
 class Engine:
 
@@ -173,6 +259,9 @@ class Engine:
         self.world.add_triangle(triangle6)
         self.world.add_triangle(triangle7)
         self.world.add_triangle(triangle8)
+
+        for triangle in cube_model.cube_model:
+            self.world.add_triangle(Triangle(triangle))
         
         
 
@@ -206,7 +295,8 @@ class Engine:
 
         # adding camera path movement
 
-        self.camera.orbit([0,0,0])
+        self.camera.update()
+        self.world.update()
         pass
 
     def flatten_triangle(self, triangle):
@@ -326,7 +416,7 @@ class Engine:
                 new_points.append(new_point)
 
             # get color of triangle
-            lighted_color = triangle.get_lighted_color(self.world.sun_direction)
+            lighted_color = triangle.get_lighted_color(self.world.sun_direction,self.camera.pos)
             
             pygame.draw.polygon(self.screen,lighted_color,new_points)
 
@@ -384,11 +474,13 @@ class Engine:
                         elif event.key == pygame.K_PERIOD:
                             # Handle left key press
                             print("Period key pressed")
-                            self.camera.pos = self.camera.pos + np.array([-CAMERA_MOVE_SPEED,0,0])
+                            self.camera.move("FORWARD")
+                            #self.camera.pos = self.camera.pos + np.array([-CAMERA_MOVE_SPEED,0,0])
                         elif event.key == pygame.K_COMMA:
                             # Handle right key press
                             print("Comma key pressed")
-                            self.camera.pos = self.camera.pos + np.array([CAMERA_MOVE_SPEED,0,0])
+                            self.camera.move("BACKWARD")
+                            #self.camera.pos = self.camera.pos + np.array([CAMERA_MOVE_SPEED,0,0])
                         elif event.key == pygame.K_SEMICOLON:
                             # Handle left key press
                             print("Semicolon key pressed")
@@ -397,6 +489,10 @@ class Engine:
                             # Handle right key press
                             print("Quote key pressed")
                             self.camera.turn("RIGHT")
+                        elif event.key == pygame.K_SPACE:
+                            self.camera.toggle_orbit()
+                        elif event.key == pygame.K_s:
+                            self.world.toggle_sunrising()
 
 
                 
@@ -406,5 +502,5 @@ class Engine:
                 
                 break
 
-            time.sleep(0.1)
+            time.sleep(0.05)
 
