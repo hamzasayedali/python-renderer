@@ -4,6 +4,8 @@ import numpy as np
 import random
 import math
 
+import helpers
+
 # Constants
 WIDTH = 640
 HEIGHT = 640
@@ -29,26 +31,48 @@ class Camera:
 
         print(f"FACING: {self.facing[0]} {self.facing[1]}")
 
+    def set_direction(self, degrees):
+        self.direction = degrees
+        self.facing = np.array([round(math.cos(math.radians(self.direction)),2),round(math.sin(math.radians(self.direction)),2),0])
+
+    
+
     def turn(self, direction):
         if direction == "LEFT":
-            self.direction = self.direction - TURN_SPEED
+            self.set_direction(self.direction - TURN_SPEED)
             print("turn left")
             
         if direction == "RIGHT":
-            self.direction = self.direction + TURN_SPEED
+            self.set_direction(self.direction + TURN_SPEED)
             print("turn right")
 
-        self.facing = np.array([round(math.cos(math.radians(self.direction)),2),round(math.sin(math.radians(self.direction)),2),0])
+        
+
+    def orbit(self, orbit_point):
+        # face the origin
+
+        direction_to_orbit = self.pos - np.array(orbit_point)
+
+        angle = helpers.angle_between_vectors_degrees([direction_to_orbit[0],direction_to_orbit[1],0],[1,0,0])
+
+        self.set_direction(angle)
+
+        
+        
+        
         
 
 
 class Triangle:
-    def __init__(self, points=[]):
+    def __init__(self, points=[], base_color = [45, 200,85]):
         self.points = points
         self.color = (random.randint(0,255),random.randint(0,255),random.randint(0,255))
 
         self.dist_to_camera = 0
         self.middle = (np.array(self.points[0]) + np.array(self.points[1]) + np.array(self.points[2]))/3.0
+
+
+        self.base_color = base_color
     
     def update_dist_to_camera(self,camera_coord):
         self.dist_to_camera = np.linalg.norm(self.middle - camera_coord)
@@ -56,11 +80,37 @@ class Triangle:
     def get_center(self):
         self.middle = (np.array(self.points[0]) + np.array(self.points[1]) + np.array(self.points[2]))/3.0
         return self.middle
+    
+    def get_lighted_color(self, sun_direction):
+
+        #compute the projection of the normal of the triangle to the direction of the sun. Parallel means full color, perpendicular means duller color
+        v1 = np.array(self.points[1]) - np.array(self.points[0])
+        v2 = np.array(self.points[2]) - np.array(self.points[0])
+    
+        # Compute the cross product of the two edge vectors
+        normal_vector = np.cross(v1, v2)
+        normalized_normal = normal_vector / np.linalg.norm(normal_vector)
+
+        
+        normalized_sun = sun_direction/np.linalg.norm(sun_direction)
+        
+
+
+        light_level = abs(np.dot(normalized_sun,normalized_normal)) * 0.9 + 0.1
+
+        
+
+        adjusted_color = np.array(self.base_color) * light_level
+        return (adjusted_color[0],adjusted_color[1],adjusted_color[2])
+
+
+
 
 class World:
     def __init__(self):
         self.triangles = []
         self.origin = np.array([0,0,0])
+        self.sun_direction = np.array([4,0,1])
 
     def add_triangle(self, triangle):
         self.triangles.append(triangle)
@@ -153,6 +203,10 @@ class Engine:
 
     def update(self):
         #print("Update game")
+
+        # adding camera path movement
+
+        self.camera.orbit([0,0,0])
         pass
 
     def flatten_triangle(self, triangle):
@@ -271,8 +325,10 @@ class Engine:
 
                 new_points.append(new_point)
 
+            # get color of triangle
+            lighted_color = triangle.get_lighted_color(self.world.sun_direction)
             
-            pygame.draw.polygon(self.screen,triangle.color,new_points)
+            pygame.draw.polygon(self.screen,lighted_color,new_points)
 
             triangle_center = triangle.get_center()
 
@@ -293,9 +349,6 @@ class Engine:
         self.startup()
 
         while True:
-
-            
-            
 
             try:
                 
