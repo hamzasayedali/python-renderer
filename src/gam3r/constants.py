@@ -1,5 +1,5 @@
 # Constants
-WIDTH = 640
+WIDTH = 1080
 HEIGHT = 640
 
 CAMERA_MOVE_SPEED = 0.5

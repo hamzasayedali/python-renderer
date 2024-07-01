@@ -5,6 +5,8 @@ from helpers import angle_between_vectors_degrees
 
 from engine import Camera
 
+from game_objs import Prisim
+
 def test_triangle_lighting():
     triangle = Triangle([
             (0,0,-2),
@@ -60,3 +62,8 @@ def test_camera_tilt():
     
 
 test_camera_tilt()
+
+def test_prisim():
+    prisim = Prisim([-6,3,0],[1,1,4])
+
+test_prisim()

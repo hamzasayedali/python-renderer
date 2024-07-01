@@ -1,10 +1,11 @@
 import pygame
 import time
 import numpy as np
+import math
 
 import models as models
 
-from game_objs import Camera, World, Triangle
+from game_objs import Camera, World, Triangle, Prisim, Robot
 
 import constants
 
@@ -16,6 +17,9 @@ class Engine:
 
         self.world = World()
         self.camera = Camera()
+
+        self.robot = Robot()
+        self.current_robot_joint = 0
 
         #list of points to draw after rendering
         self.render_result = []
@@ -35,6 +39,19 @@ class Engine:
 
         for triangle in cube:
             self.world.add_triangle(Triangle(triangle))
+
+
+        prisim = Prisim([-6,3,0],[1,1,4])
+        prisim2 = Prisim([-6,3,-4],[4,1,1])
+
+        for triangle in prisim.mesh_triangles:
+            self.world.add_triangle(triangle)
+
+        for triangle in prisim2.mesh_triangles:
+            self.world.add_triangle(triangle)
+
+        for triangle in self.robot.mesh_triangles:
+            self.world.add_triangle(triangle)
         
     def startup(self):
         print("startup")
@@ -93,6 +110,23 @@ class Engine:
             self.camera.tilt("DOWN")
         elif event.key == pygame.K_LEFTBRACKET:
             self.camera.tilt("UP")
+
+        elif event.key == pygame.K_a:
+            self.robot.rotate_joint(self.current_robot_joint,math.pi/8)
+            self.world.triangles = []
+            self.populate_world()
+        elif event.key == pygame.K_d:
+            self.robot.rotate_joint(self.current_robot_joint,-math.pi/8)
+            self.world.triangles = []
+            self.populate_world()
+        elif event.key == pygame.K_0:
+            self.current_robot_joint = 0
+        elif event.key == pygame.K_1:
+            self.current_robot_joint = 1
+        elif event.key == pygame.K_2:
+            self.current_robot_joint = 2
+        elif event.key == pygame.K_3:
+            self.current_robot_joint = 3
 
 
     def update(self):
@@ -161,7 +195,7 @@ class Engine:
         return scaled_point
 
     def render(self):
-        print("Render scene")
+        
 
         # need to process the triangles in the world and figure out
         # where to draw them relative to the camera
@@ -178,11 +212,6 @@ class Engine:
         normal_to_plane_of_point = self.project_vector(vec_to_origin, self.camera.facing)
 
         deviation = normal_to_plane_of_point - vec_to_origin
-
-
-        print(vec_to_origin)
-        print(normal_to_plane_of_point)
-        print(deviation)
 
         non_scaled_point = np.array([deviation[1],deviation[2]])
 
@@ -268,5 +297,5 @@ class Engine:
                 
                 break
 
-            time.sleep(0.05)
+            time.sleep(0.02)
 

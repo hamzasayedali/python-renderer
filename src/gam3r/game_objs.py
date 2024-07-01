@@ -145,7 +145,7 @@ class Camera:
     def update(self):
         
         if self.is_orbiting:
-            self.orbit([0,0,0])
+            self.orbit([-5,-5,-3])
 
     def orbit(self, orbit_point):
         # face the origin
@@ -155,7 +155,7 @@ class Camera:
         pos_in_xy0 = np.array([self.pos[0],self.pos[1],0])
         #print(f"POS IN XY TO START {pos_in_xy0}")
 
-        theta = math.pi / 60
+        theta = math.pi / 120
         rotation_matrix = np.array([[math.cos(theta), -math.sin(theta), 0],
                            [math.sin(theta), math.cos(theta), 0],
                            [0,0,1]])
@@ -258,4 +258,208 @@ class World:
                 self.sun_velocity *= -1
 
 
+
+class Prisim:
+
+    def __init__(self, pos=[0,0,0], dim=[1,1,4], up=[0,0,-1], facing=[1,0,0], color=[45,200,45]):
+        self.pos = np.array(pos)
+        self.dim = np.array(dim)
+
+        self.up = np.array(up)
+        self.facing = np.array(facing)
+
+        self.perp_axis = np.array([0,0,0])
+
+        self.compute_perp_axis()
+
+        self.color = color
+
+        self.mesh_triangles = []
+
+        self.generate_mesh()
+
+
+    
+
+
+    def compute_perp_axis(self):
+        self.perp_axis = np.cross(self.up, self.facing)
+        print(self.perp_axis)
+
+    
+        
+    def generate_mesh(self):
+        # using the position and dimensions, generate a mesh of triangles that form the prisim
+
+        # each prisim needs 12 triangles, 2 per side for 6 sides
+
+        # define corners
+
+        # bottom corners
+        b0 = self.pos - self.facing * self.dim[0] / 2.0 - self.perp_axis * self.dim[1] / 2.0 
+        b1 = b0 + self.facing * self.dim[0] 
+        b2 = b1 + self.perp_axis * self.dim[1]
+        b3 = b2 - self.facing * self.dim[0]
+
+        t0 = b0 + self.up * self.dim[2]
+        t1 = b1 + self.up * self.dim[2]
+        t2 = b2 + self.up * self.dim[2]
+        t3 = b3 + self.up * self.dim[2]
+
+        triangle0 = Triangle([b0,b1,b2],base_color=self.color)
+        triangle1 = Triangle([b2,b3,b0],base_color=self.color)
+        triangle2 = Triangle([t0,t1,t2],base_color=self.color)
+        triangle3 = Triangle([t2,t3,t0],base_color=self.color)
+
+        triangle4 = Triangle([b0,b1,t1],base_color=self.color)
+        triangle5 = Triangle([t1,t0,b0],base_color=self.color)
+
+        triangle6 = Triangle([b2,b3,t3],base_color=self.color)
+        triangle7 = Triangle([t3,t2,b2],base_color=self.color)
+
+        triangle8 = Triangle([b1,b2,t2],base_color=self.color)
+        triangle9 = Triangle([t2,t1,b1],base_color=self.color)
+
+        triangle10 = Triangle([b0,b3,t3],base_color=self.color)
+        triangle11 = Triangle([t3,t0,b0],base_color=self.color)
+
+        self.mesh_triangles.append(triangle0)
+        self.mesh_triangles.append(triangle1)
+        self.mesh_triangles.append(triangle2)
+        self.mesh_triangles.append(triangle3)
+        self.mesh_triangles.append(triangle4)
+        self.mesh_triangles.append(triangle5)
+        self.mesh_triangles.append(triangle6)
+        self.mesh_triangles.append(triangle7)
+        self.mesh_triangles.append(triangle8)
+        self.mesh_triangles.append(triangle9)
+        self.mesh_triangles.append(triangle10)
+        self.mesh_triangles.append(triangle11)
+
+def get_rot_matrix(axis, theta):
+    """
+    Return the rotation matrix associated with counterclockwise rotation about
+    the given axis by theta radians.
+    """
+    axis = np.asarray(axis)
+    axis = axis / np.linalg.norm(axis)
+    ux, uy, uz = axis
+    cos_theta = np.cos(theta)
+    sin_theta = np.sin(theta)
+    one_minus_cos_theta = 1 - cos_theta
+    
+    return np.array([
+        [cos_theta + ux**2 * one_minus_cos_theta, ux * uy * one_minus_cos_theta - uz * sin_theta, ux * uz * one_minus_cos_theta + uy * sin_theta],
+        [uy * ux * one_minus_cos_theta + uz * sin_theta, cos_theta + uy**2 * one_minus_cos_theta, uy * uz * one_minus_cos_theta - ux * sin_theta],
+        [uz * ux * one_minus_cos_theta - uy * sin_theta, uz * uy * one_minus_cos_theta + ux * sin_theta, cos_theta + uz**2 * one_minus_cos_theta]
+    ])
+
+class Robot:
+
+    def __init__(self):
+
+        self.base_frame = [-5,-5,-3]
+
+        self.L =  [4,5,6,2]
+        self.theta0 =       [math.pi/4, math.pi/8, math.pi/8, math.pi/2]
+        self.joint_types=   ["R"]
+        self.joint_axes=    [[0,0,1],[0,1,0],[0,0,1],[1,0,0]]
+
+        self.mesh_triangles = []
+
+        self.generate_arm_mesh()
+
+    def rotate_joint(self, joint_index, delta):
+
+        self.theta0[joint_index] += delta
+        self.generate_arm_mesh()
+
+    def generate_arm_mesh(self):
+
+        self.mesh_triangles = []
+        
+        pos_0 = self.base_frame
+        rot_0 = [0,0,1]
+
+        facing_0 = [1,0,0]
+
+        rot_0 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), rot_0)
+        facing_0 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), facing_0)
+        #rotate and then translate
+
+        pos_1_0 = rot_0 * self.L[0] 
+
+        rot_1 = [0,0,1]
+        facing_1 = [1,0,0]
+
+        rot_1 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), rot_1))
+        facing_1 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]),np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), facing_1))
+
+        pos_2_1 = rot_1 * self.L[1]
+
+        rot_2 = [0,0,1]
+        facing_2 = [1,0,0]
+
+        rot_2 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]),rot_2)))
+        facing_2 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]), facing_2)))
+        
+        pos_3_2 = rot_2 * self.L[2]
+
+        rot_3 = [0,0,1]
+        facing_3 = [1,0,0]
+
+        rot_3 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]),np.dot(get_rot_matrix(self.joint_axes[3],self.theta0[3]),rot_3))))
+        facing_3 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]),np.dot(get_rot_matrix(self.joint_axes[3],self.theta0[3]),facing_3))))
+        
+
+        prisim0 = Prisim(pos_0, [1,1,self.L[0]], up=rot_0, facing=facing_0)
+
+        base0_up = prisim0.facing
+        base0_pos = prisim0.pos - base0_up * prisim0.dim[1] / 2.0 
+        base0 = Prisim(base0_pos, [prisim0.dim[1]*1.2,prisim0.dim[1]*1.2,prisim0.dim[0]],up=base0_up,facing=prisim0.up, color=[50,50,50])
+
+        prisim1 = Prisim(pos_0 + pos_1_0, [0.8,0.8,self.L[1]],up=rot_1,facing=facing_1)
+
+        base1_up = prisim1.facing
+        base1_pos = prisim1.pos - base1_up * prisim1.dim[1] / 2.0 
+        base1 = Prisim(base1_pos, [prisim1.dim[1]*1.2,prisim1.dim[1]*1.2,prisim1.dim[0]],up=base1_up,facing=prisim1.up, color=[50,50,50])
+
+
+        prisim2 = Prisim(pos_0 + pos_1_0 + pos_2_1, [0.6,0.6,self.L[2]],up=rot_2,facing=facing_2)
+        base2_up = prisim2.facing
+        base2_pos = prisim2.pos - base2_up * prisim2.dim[1] / 2.0 
+        base2 = Prisim(base2_pos, [prisim2.dim[1]*1.2,prisim2.dim[1]*1.2,prisim2.dim[0]],up=base2_up,facing=prisim2.up, color=[50,50,50])
+
+        prisim3 = Prisim(pos_0 + pos_1_0 + pos_2_1 + pos_3_2, [0.4,0.4,self.L[3]],up=rot_3,facing=facing_3)
+        base3_up = prisim3.facing
+        base3_pos = prisim3.pos - base3_up * prisim3.dim[1] / 2.0 
+        base3 = Prisim(base3_pos, [prisim3.dim[1]*1.2,prisim3.dim[1]*1.2,prisim3.dim[0]],up=base3_up,facing=prisim3.up, color=[50,50,50])
+
+
+        for triangle in prisim0.mesh_triangles:
+            self.mesh_triangles.append(triangle)
+
+        for triangle in base0.mesh_triangles:
+            self.mesh_triangles.append(triangle)
+        
+        for triangle in prisim1.mesh_triangles:
+            self.mesh_triangles.append(triangle)
+
+        for triangle in base1.mesh_triangles:
+            self.mesh_triangles.append(triangle)
+
+        for triangle in prisim2.mesh_triangles:
+            self.mesh_triangles.append(triangle)
+
+        for triangle in base2.mesh_triangles:
+            self.mesh_triangles.append(triangle)
+        
+        for triangle in prisim3.mesh_triangles:
+            self.mesh_triangles.append(triangle)
+
+        for triangle in base3.mesh_triangles:
+            self.mesh_triangles.append(triangle)
+
+
+        
 
