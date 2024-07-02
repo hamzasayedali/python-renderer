@@ -136,16 +136,52 @@ class Camera:
 
     def tilt(self, direction):
         if direction == "UP":
-            self.set_pitch(self.pitch + 10)
+            self.set_pitch(self.pitch + constants.TURN_SPEED)
 
         if direction == "DOWN":
-            self.set_pitch(self.pitch - 10)
+            self.set_pitch(self.pitch - constants.TURN_SPEED)
 
     
-    def update(self):
+    def update(self, inputs):
         
         if self.is_orbiting:
             self.orbit([-5,-5,-3])
+
+
+        # call functions based on current input status
+
+        if inputs["UP"]:
+            self.move("UP")
+            pass
+        if inputs["DOWN"]:
+            self.move("DOWN")
+            pass
+
+        if inputs["LEFT"]:
+            self.move("LEFT")
+            pass
+        if inputs["RIGHT"]:
+            self.move("RIGHT")
+            pass
+        if inputs["COMMA"]:
+            self.move("BACKWARD")
+            pass
+        if inputs["PERIOD"]:
+            self.move("FORWARD")
+            pass
+        if inputs["SEMICOLON"]:
+            self.turn("LEFT")
+            pass
+        if inputs["QUOTE"]:
+            self.turn("RIGHT")
+            pass
+        if inputs["LEFTBRACKET"]:
+            self.tilt("UP")
+            pass
+        if inputs["RIGHTBRACKET"]:
+            self.tilt("DOWN")
+            pass
+        
 
     def orbit(self, orbit_point):
         # face the origin
@@ -155,14 +191,19 @@ class Camera:
         pos_in_xy0 = np.array([self.pos[0],self.pos[1],0])
         #print(f"POS IN XY TO START {pos_in_xy0}")
 
-        theta = math.pi / 120
+        theta = math.pi / constants.ORBIT_SPEED
+
         rotation_matrix = np.array([[math.cos(theta), -math.sin(theta), 0],
                            [math.sin(theta), math.cos(theta), 0],
                            [0,0,1]])
         
         #print(rotation_matrix)
+
+        shift_to_origin = pos_in_xy0 - np.array([orbit_point[0], orbit_point[1], 0])
         
-        new_pos_in_xy = np.matmul(pos_in_xy0, rotation_matrix)
+        new_pos_in_xy = np.matmul(shift_to_origin, rotation_matrix)
+
+        new_pos_in_xy = new_pos_in_xy + (pos_in_xy0 - shift_to_origin)
 
         #print(new_pos_in_xy)
 
@@ -284,7 +325,7 @@ class Prisim:
 
     def compute_perp_axis(self):
         self.perp_axis = np.cross(self.up, self.facing)
-        print(self.perp_axis)
+        #print(self.perp_axis)
 
     
         
@@ -367,7 +408,29 @@ class Robot:
 
         self.mesh_triangles = []
 
+        
+
         self.generate_arm_mesh()
+
+        self.current_joint_controlled = 0
+
+        self.updated = False
+
+    def update(self, inputs):
+
+        # max arm speed is ROBOT_ROT_SPEED, min arm speed is 0.5 that, diminises as arm gets longer
+        total_length = np.sum(self.L[self.current_joint_controlled:])
+        arm_rot_speed = constants.ROBOT_ROT_SPEED * (0.3 + 0.7 * 1/total_length)
+        if inputs["a"]:
+            
+            self.rotate_joint(self.current_joint_controlled, arm_rot_speed)
+            self.updated = True
+
+        if inputs["d"]:
+            self.rotate_joint(self.current_joint_controlled, -arm_rot_speed)
+            self.updated = True
+
+
 
     def rotate_joint(self, joint_index, delta):
 
@@ -379,7 +442,7 @@ class Robot:
         self.mesh_triangles = []
         
         pos_0 = self.base_frame
-        rot_0 = [0,0,1]
+        rot_0 = [0,0,-1]
 
         facing_0 = [1,0,0]
 
@@ -389,7 +452,7 @@ class Robot:
 
         pos_1_0 = rot_0 * self.L[0] 
 
-        rot_1 = [0,0,1]
+        rot_1 = [0,0,-1]
         facing_1 = [1,0,0]
 
         rot_1 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), rot_1))
@@ -397,7 +460,7 @@ class Robot:
 
         pos_2_1 = rot_1 * self.L[1]
 
-        rot_2 = [0,0,1]
+        rot_2 = [0,0,-1]
         facing_2 = [1,0,0]
 
         rot_2 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]),rot_2)))
@@ -405,7 +468,7 @@ class Robot:
         
         pos_3_2 = rot_2 * self.L[2]
 
-        rot_3 = [0,0,1]
+        rot_3 = [0,0,-1]
         facing_3 = [1,0,0]
 
         rot_3 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]),np.dot(get_rot_matrix(self.joint_axes[3],self.theta0[3]),rot_3))))
@@ -461,5 +524,27 @@ class Robot:
             self.mesh_triangles.append(triangle)
 
 
-        
+class Skybox:
+    def __init__(self):
+        self.pos_z = 1000
+
+        self.color = [200,200,200]
+
+        self.mesh_triangles = []
+
+        self.generate_triangle_mesh()
+
+    def generate_triangle_mesh(self):
+
+        world_size = 10000
+
+        c0, c1, c2, c3 = [-world_size,-world_size,self.pos_z], [world_size,-world_size,self.pos_z],[world_size,world_size,self.pos_z],[-world_size,world_size,self.pos_z]
+
+        triangle0 = Triangle([c0,c1,c2],self.color)
+        triangle1 = Triangle([c2,c3,c0],[200,200,240])
+
+        self.mesh_triangles = [triangle0,triangle1]
+
+            
+
 

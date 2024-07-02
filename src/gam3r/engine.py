@@ -5,7 +5,7 @@ import math
 
 import models as models
 
-from game_objs import Camera, World, Triangle, Prisim, Robot
+from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox
 
 import constants
 
@@ -23,6 +23,21 @@ class Engine:
 
         #list of points to draw after rendering
         self.render_result = []
+
+        self.inputs_dict = {
+            "LEFT": False,
+            "RIGHT": False,
+            "UP": False,
+            "DOWN": False,
+            "COMMA": False,
+            "PERIOD": False,
+            "SEMICOLON": False,
+            "QUOTE": False,
+            "LEFTBRACKET": False,
+            "RIGHTBRACKET": False,
+            "a": False,
+            "d": False,
+        }
 
 
     def populate_world(self):
@@ -52,6 +67,39 @@ class Engine:
 
         for triangle in self.robot.mesh_triangles:
             self.world.add_triangle(triangle)
+
+        self.world.triangles = []
+        skybox = Skybox()
+
+        for triangle in skybox.mesh_triangles:
+            self.world.add_triangle(triangle)
+
+
+
+        triangle = Triangle(
+            [[0,2,0],[0,-2,0],[0,0,-2]],[150,150,200]
+            )
+        triangle2 = Triangle(
+            [[8,2,0],[8,-2,0],[8,0,-2]],[250,150,150]
+            )
+        
+        triangle3 = Triangle(
+            [[2,4,0],[6,4,0],[4,4,-2]],[250,150,150]
+            )
+        
+        triangle4 = Triangle(
+            [[2,-4,0],[6,-4,0],[4,-4,-2]],[255,100,150]
+            )
+        
+        triangle5 = Triangle([
+            [1000,0,1000],
+            [-1000,-1000,1000],
+            [-1000,1000,1000]
+        ])
+        
+        #self.world.triangles = []
+        
+        #self.world.add_triangle(triangle5)
         
     def startup(self):
         print("startup")
@@ -72,66 +120,106 @@ class Engine:
 
 
     def inputs(self, event):
+
+
+        keypress = False
+
+        if event.type == pygame.KEYDOWN:
+            keypress = True
+
+        
+
+
         if event.key == pygame.K_UP:
             # Handle up key press
-            self.camera.move("UP")
-            
+            #self.camera.move("UP")
+            self.inputs_dict["UP"] = keypress
+
         elif event.key == pygame.K_DOWN:
             # Handle down key press
-            self.camera.move("DOWN")
+            #self.camera.move("DOWN")
+            self.inputs_dict["DOWN"] = keypress
             #self.camera.pos = self.camera.pos + np.array([0,0,constants.CAMERA_MOVE_SPEED])
         elif event.key == pygame.K_LEFT:
             # Handle left key press
-            self.camera.move("LEFT")
+            #self.camera.move("LEFT")
+            self.inputs_dict["LEFT"] = keypress
             #self.camera.pos = self.camera.pos + np.array([0,constants.CAMERA_MOVE_SPEED,0])
         elif event.key == pygame.K_RIGHT:
             # Handle right key press
-            self.camera.move("RIGHT")
+            #self.camera.move("RIGHT")
+            self.inputs_dict["RIGHT"] = keypress
             #self.camera.pos = self.camera.pos + np.array([0,-constants.CAMERA_MOVE_SPEED,0])
         elif event.key == pygame.K_PERIOD:
             # Handle left key press
-            self.camera.move("FORWARD")
+            #self.camera.move("FORWARD")
+            self.inputs_dict["PERIOD"] = keypress
             
         elif event.key == pygame.K_COMMA:
             # Handle right key press
-            self.camera.move("BACKWARD")
+            #self.camera.move("BACKWARD")
+            self.inputs_dict["COMMA"] = keypress
             
         elif event.key == pygame.K_SEMICOLON:
             # Handle left key press
-            self.camera.turn("LEFT")
+            #self.camera.turn("LEFT")
+            self.inputs_dict["SEMICOLON"] = keypress
         elif event.key == pygame.K_QUOTE:
             # Handle right key press
-            self.camera.turn("RIGHT")
+            #self.camera.turn("RIGHT")
+            self.inputs_dict["QUOTE"] = keypress
         elif event.key == pygame.K_SPACE:
-            self.camera.toggle_orbit()
+            if keypress:
+                self.camera.toggle_orbit()
         elif event.key == pygame.K_s:
-            self.world.toggle_sunrising()
+            if keypress:
+                self.world.toggle_sunrising()
         elif event.key == pygame.K_RIGHTBRACKET:
-            self.camera.tilt("DOWN")
+            #self.camera.tilt("DOWN")
+            self.inputs_dict["RIGHTBRACKET"] = keypress
         elif event.key == pygame.K_LEFTBRACKET:
-            self.camera.tilt("UP")
+            #self.camera.tilt("UP")
+            self.inputs_dict["LEFTBRACKET"] = keypress
 
         elif event.key == pygame.K_a:
-            self.robot.rotate_joint(self.current_robot_joint,math.pi/8)
-            self.world.triangles = []
-            self.populate_world()
+
+            self.inputs_dict["a"] = keypress
+
+            
+                
         elif event.key == pygame.K_d:
-            self.robot.rotate_joint(self.current_robot_joint,-math.pi/8)
-            self.world.triangles = []
-            self.populate_world()
-        elif event.key == pygame.K_0:
-            self.current_robot_joint = 0
+            self.inputs_dict["d"] = keypress
+
+            
         elif event.key == pygame.K_1:
-            self.current_robot_joint = 1
+            if keypress:
+                self.robot.current_joint_controlled = 0
         elif event.key == pygame.K_2:
-            self.current_robot_joint = 2
+            if keypress:
+                self.robot.current_joint_controlled = 1
         elif event.key == pygame.K_3:
-            self.current_robot_joint = 3
+            if keypress:
+                self.robot.current_joint_controlled = 2
+        elif event.key == pygame.K_4:
+            if keypress:
+                self.robot.current_joint_controlled = 3
 
 
     def update(self):
+
         
-        self.camera.update()
+        
+        self.camera.update(self.inputs_dict)
+
+        self.robot.update(self.inputs_dict)
+
+        if self.robot.updated:
+
+            self.world.triangles = []
+            self.populate_world()
+            self.robot.updated = False
+
+
         self.world.update()
         
 
@@ -161,32 +249,38 @@ class Engine:
 
         deviation = normal_to_plane_of_point - camera_to_point
 
+        
+        
+
+       
+
         # get screen x and y values
-        y_component = self.project_vector(deviation, self.camera.up)
+        y_component = self.project_vector(deviation, self.camera.up) 
 
         x_component = deviation - y_component
 
         direction_of_x = np.dot(x_component,np.cross(self.camera.facing,self.camera.up)) > 0
 
-        final_x_component = np.linalg.norm(x_component)
+        final_x_component = np.linalg.norm(x_component) 
 
         if direction_of_x == False:
-            final_x_component = final_x_component * -1
+            final_x_component = final_x_component * -1 
 
         direction_of_y = np.dot(y_component, self.camera.up) > 0
 
         final_y_component = np.linalg.norm(y_component)
 
+        
+
         if direction_of_y == True:
             final_y_component = final_y_component * -1
 
         
-
         non_scaled_point = np.array([final_x_component,final_y_component])
 
         distance_of_plane = np.linalg.norm(normal_to_plane_of_point)
-        scale_factor = 1
-        if distance_of_plane != 0:
+        scale_factor = 10000000
+        if abs(distance_of_plane) > 0.001:
             scale_factor = (0.75/distance_of_plane) * constants.WIDTH
 
 
@@ -236,19 +330,42 @@ class Engine:
 
         for triangle in depth_buffer_triangles:
 
+
+            # check if i am looking at the triangle (if it is in our field of view)
+
+            
+
+            # do this by getting the line from the camera to each of the points
+
+            in_camera = False
+
             new_points = []
 
             for point in triangle.points:
+
+
+                camera_to_point = point - self.camera.pos 
+                if np.dot(self.camera.facing, camera_to_point) > 0:
+                    in_camera = True
+
+
+
+
                 new_point = self.find_camera_rel_point(point)
 
                 new_point = (new_point + move_to_center_screen)[0]
+
+
+                
 
                 new_points.append(new_point)
 
             # get color of triangle
             lighted_color = triangle.get_lighted_color(self.world.sun_direction,self.camera.pos)
+
+            if in_camera:
             
-            pygame.draw.polygon(self.screen,lighted_color,new_points)
+                pygame.draw.polygon(self.screen,lighted_color,new_points)
 
             triangle_center = triangle.get_center()
 
@@ -264,6 +381,8 @@ class Engine:
 
 
     def run(self):
+
+        clock = pygame.time.Clock()
         print(self.name)
 
         # initializing
@@ -280,7 +399,7 @@ class Engine:
                         break
                     
                     # Check for key presses
-                    elif event.type == pygame.KEYDOWN:
+                    elif event.type == pygame.KEYDOWN or event.type == pygame.KEYUP:
                         self.inputs(event)
 
                 # update game state
@@ -298,4 +417,5 @@ class Engine:
                 break
 
             time.sleep(0.02)
+            #clock.tick(30)
 
