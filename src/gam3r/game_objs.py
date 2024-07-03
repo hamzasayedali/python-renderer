@@ -3,6 +3,7 @@ import math
 import constants
 import helpers
 import random
+import pygame
 
 class Camera:
     def __init__(self, pos = [3.0,0.0,0.0], direction = 180, pitch = 0, fov=60, up=[0,0,-1]):
@@ -522,6 +523,7 @@ class Robot:
 
         for triangle in base3.mesh_triangles:
             self.mesh_triangles.append(triangle)
+    
 
 
 class Skybox:

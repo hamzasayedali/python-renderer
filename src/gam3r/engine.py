@@ -68,12 +68,12 @@ class Engine:
         for triangle in self.robot.mesh_triangles:
             self.world.add_triangle(triangle)
 
-        self.world.triangles = []
-        skybox = Skybox()
+        
+        #skybox = Skybox()
+        #for triangle in skybox.mesh_triangles:
+        #    self.world.add_triangle(triangle)
 
-        for triangle in skybox.mesh_triangles:
-            self.world.add_triangle(triangle)
-
+        
 
 
         triangle = Triangle(
@@ -99,7 +99,7 @@ class Engine:
         
         #self.world.triangles = []
         
-        #self.world.add_triangle(triangle5)
+        self.world.add_triangle(triangle)
         
     def startup(self):
         print("startup")
@@ -110,6 +110,10 @@ class Engine:
             pygame.display.set_caption(self.name)
             self.screen = pygame.display.set_mode((constants.WIDTH, constants.HEIGHT))
             pygame.display.flip()
+
+            pygame.font.init() # you have to call this at the start, 
+                   # if you want to use this module.
+            self.my_font = pygame.font.SysFont('Comic Sans MS', 30)
         
         except Exception as e:
             print(e)
@@ -250,6 +254,8 @@ class Engine:
         deviation = normal_to_plane_of_point - camera_to_point
 
         
+
+        reflect_in_y = point[0] > 0 and self.camera.facing[0] > 0
         
 
        
@@ -271,9 +277,11 @@ class Engine:
         final_y_component = np.linalg.norm(y_component)
 
         
-
         if direction_of_y == True:
             final_y_component = final_y_component * -1
+
+
+        
 
         
         non_scaled_point = np.array([final_x_component,final_y_component])
@@ -290,11 +298,21 @@ class Engine:
 
     def render(self):
         
+        move_to_center_screen = np.array([constants.WIDTH/2.0, constants.HEIGHT/2.0])
 
         # need to process the triangles in the world and figure out
         # where to draw them relative to the camera
 
         self.screen.fill((255,255,255))
+
+
+        test_point = np.array([10000,10000,1000])
+
+        test_point_in_camera = self.find_camera_rel_point(test_point)
+
+        test_point_in_camera = test_point_in_camera + move_to_center_screen
+
+        pygame.draw.circle(self.screen,(0,255,0),(test_point_in_camera[0],test_point_in_camera[1]),5)
 
 
         # render origin point
@@ -315,10 +333,10 @@ class Engine:
 
         scaled_point = self.find_camera_rel_point(origin)
 
-        move_to_center_screen = np.array([[constants.WIDTH/2.0, constants.HEIGHT/2.0]])
         
         
-        final_point = (scaled_point + move_to_center_screen)[0]
+        
+        final_point = (scaled_point + move_to_center_screen)
         
         pygame.draw.circle(self.screen,(255,0,0),(final_point[0],final_point[1]),10)
 
@@ -353,7 +371,7 @@ class Engine:
 
                 new_point = self.find_camera_rel_point(point)
 
-                new_point = (new_point + move_to_center_screen)[0]
+                new_point = (new_point + move_to_center_screen)
 
 
                 
@@ -378,6 +396,37 @@ class Engine:
         pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(constants.WIDTH/2-10,constants.HEIGHT/2-1,20,2))
 
         
+
+        # draw robot select bar
+        box_width = 40
+        pos = [constants.WIDTH / 2.0 - len(self.robot.L) / 2.0 * box_width,0]
+
+
+        selected_color = [13,41,63]
+        not_selected_color = [1,22,39]
+
+        selected_text = [162,191,252]
+        not_selected_text = [137,164,187]
+
+        for i in range(len(self.robot.L)):
+
+
+
+            if i == self.robot.current_joint_controlled:
+                box_color = selected_color
+                text_color = selected_text
+            else:
+                box_color = not_selected_color
+                text_color = not_selected_text
+
+
+            
+
+            pygame.draw.rect(self.screen,box_color,pygame.Rect(pos[0] + 40 * i,pos[1],40,40))
+            text_surface = self.my_font.render(f'{i+1}', False, text_color)
+            text_rect = text_surface.get_rect(center=(pos[0] + 40 * i + box_width/2.0, pos[1] + box_width / 2.0))
+            self.screen.blit(text_surface,text_rect)
+
 
 
     def run(self):
