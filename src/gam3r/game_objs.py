@@ -647,6 +647,22 @@ class MenuButton:
 
         
 
+def hallway(pos):
+
+    triangles = []
+
+    prisims = []
+    prisims.append(Prisim(pos,[4,0.3,4],[0,0,1],[1,0,0]))
+    pos2 = np.array(pos)+np.array([0,5,0])
+    prisims.append(Prisim([pos2[0],pos2[1],pos2[2]],[4,0.3,4],[0,0,1],[1,0,0]))
+
+    for prisim in prisims:
+        for triangle in prisim.mesh_triangles:
+            triangles.append(triangle)
+
+
+    return triangles
+
 
         
 

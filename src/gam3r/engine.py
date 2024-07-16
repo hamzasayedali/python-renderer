@@ -2,10 +2,11 @@ import pygame
 import time
 import numpy as np
 import math
+import helpers
 
 import models as models
 
-from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground
+from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway
 
 from render_funcs import CameraDetails
 import constants
@@ -105,6 +106,12 @@ class Engine:
         ])
         
         #self.world.triangles = []
+
+
+        hall = hallway([0,10,0])
+
+        for triangle in hall:
+            self.world.add_triangle(triangle)
         
         self.world.add_triangle(triangle)
 
@@ -315,6 +322,48 @@ class Engine:
         move_to_center = flip_y + np.array([constants.WIDTH/2.0, constants.HEIGHT/2.0])
 
         return move_to_center
+    
+    def signed_distance_to_plane(self, point, plane_normal, d):
+        return np.dot(plane_normal,np.array(point)) - d
+    
+    def clip_instance_against_plane(self, instance: Triangle, plane):
+
+        d = self.signed_distance_to_plane(instance.get_center(),plane[0],plane[1])
+
+        if d > 0:
+            return True
+        return False
+
+
+    def clip_scene(self):
+
+
+        # planes
+
+        camera_facing = helpers.normalize(self.camera.facing)
+
+        #print(self.camera.pos + 3 * camera_facing)
+
+        near_plane = (camera_facing,helpers.signed_dist_to_plane(np.array([0,0,0]),camera_facing,(self.camera.pos + 3 * camera_facing)))
+        far_plane = (-camera_facing,helpers.signed_dist_to_plane(np.array([0,0,0]),-camera_facing,(self.camera.pos + 30 * camera_facing)))
+
+        print(near_plane[1])
+        clipped_triangles = []
+
+        for triangle in self.world.triangles:
+
+            # check if triangle needs to be clipped or not
+            # start with simply clipping against the planes
+
+            near = self.clip_instance_against_plane(triangle, near_plane)
+            far = self.clip_instance_against_plane(triangle, far_plane)
+            
+            #print(far)
+            if near and far:
+                clipped_triangles.append(triangle)
+
+        return clipped_triangles
+
 
     def render(self):
 
@@ -349,7 +398,6 @@ class Engine:
 
             self.screen.fill((255,255,255))
 
-
             test_point = np.array([0,0,0])
 
             test_point_in_camera, in_camera = self.convert_3d_to_2d_coords(camera_details, test_point)
@@ -357,26 +405,15 @@ class Engine:
             test_point_in_camera = self.cam_coords_to_pygame(test_point_in_camera)
 
             pygame.draw.circle(self.screen,(255,155,0),(test_point_in_camera[0],test_point_in_camera[1]),5)
-
-
-            #for point in self.grid.points:
-            #    rel_point = self.find_camera_rel_point(point)
-            #    rel_point = rel_point + move_to_center_screen
-            #    pygame.draw.circle(self.screen,(0,255,0),(rel_point[0],rel_point[1]),5)
-
-
-
-            # render origin point
-
-            origin = self.world.origin
-
+            
+            clipped_triangles = self.clip_scene()
             
 
-            for triangle in self.world.triangles:
+            for triangle in clipped_triangles:
                 triangle.update_dist_to_camera(self.camera.pos)
 
             # sort triangles by distance to camera
-            depth_buffer_triangles = sorted(self.world.triangles, key=lambda x: x.dist_to_camera, reverse=True)
+            depth_buffer_triangles = sorted(clipped_triangles, key=lambda x: x.dist_to_camera, reverse=True)
 
             for triangle in depth_buffer_triangles:
 
