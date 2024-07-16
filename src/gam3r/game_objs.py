@@ -6,7 +6,7 @@ import random
 import pygame
 
 class Camera:
-    def __init__(self, pos = [3.0,0.0,0.0], direction = 180, pitch = 0, fov=60, up=[0,0,-1]):
+    def __init__(self, pos = [3.0,0.0,0.0], direction = 180, pitch = 0, fov=60, up=[0,0,1]):
         # vec3 for point of reference
         self.pos = np.array(pos)
         # rotation about z axis in degrees
@@ -26,7 +26,7 @@ class Camera:
         print(f"FACING: {self.facing[0]} {self.facing[1]}")
 
     def get_perpendicular_axis(self):
-        axis = np.cross(self.facing, self.up)
+        axis = np.cross(self.facing, -self.up)
         axis = axis / np.linalg.norm(axis)
         return axis
 
@@ -42,10 +42,10 @@ class Camera:
             self.pos -= np.array(movement_vector)
 
         if direction == "UP":
-            self.pos = self.pos + np.array([0,0,-constants.CAMERA_MOVE_SPEED])
+            self.pos = self.pos + np.array([0,0,constants.CAMERA_MOVE_SPEED])
 
         if direction == "DOWN":
-            self.pos = self.pos + np.array([0,0,+constants.CAMERA_MOVE_SPEED])
+            self.pos = self.pos + np.array([0,0,-constants.CAMERA_MOVE_SPEED])
 
         if direction == "LEFT":
             self.pos = self.pos + self.get_perpendicular_axis() * (-constants.CAMERA_MOVE_SPEED)
@@ -409,11 +409,11 @@ class Robot:
 
         self.mesh_triangles = []
 
-        
+        self.current_joint_controlled = 0
 
         self.generate_arm_mesh()
 
-        self.current_joint_controlled = 0
+        
 
         self.updated = False
 
@@ -439,6 +439,8 @@ class Robot:
         self.generate_arm_mesh()
 
     def generate_arm_mesh(self):
+
+        arm_color = [137,164,187]
 
         self.mesh_triangles = []
         
@@ -476,28 +478,41 @@ class Robot:
         facing_3 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]),np.dot(get_rot_matrix(self.joint_axes[3],self.theta0[3]),facing_3))))
         
 
-        prisim0 = Prisim(pos_0, [1,1,self.L[0]], up=rot_0, facing=facing_0)
+        prisim0 = Prisim(pos_0, [1,1,self.L[0]], up=rot_0, facing=facing_0, color=arm_color)
 
+        base0_color = [50,50,50]
+
+        if self.current_joint_controlled == 0:
+            base0_color = [230,230,245]
         base0_up = prisim0.facing
         base0_pos = prisim0.pos - base0_up * prisim0.dim[1] / 2.0 
-        base0 = Prisim(base0_pos, [prisim0.dim[1]*1.2,prisim0.dim[1]*1.2,prisim0.dim[0]],up=base0_up,facing=prisim0.up, color=[50,50,50])
+        base0 = Prisim(base0_pos, [prisim0.dim[1]*1.2,prisim0.dim[1]*1.2,prisim0.dim[0]],up=base0_up,facing=prisim0.up, color=base0_color)
 
-        prisim1 = Prisim(pos_0 + pos_1_0, [0.8,0.8,self.L[1]],up=rot_1,facing=facing_1)
+        prisim1 = Prisim(pos_0 + pos_1_0, [0.8,0.8,self.L[1]],up=rot_1,facing=facing_1,color=arm_color)
 
+        base1_color = [50,50,50]
+        if self.current_joint_controlled == 1:
+            base1_color = [230,230,245]
         base1_up = prisim1.facing
         base1_pos = prisim1.pos - base1_up * prisim1.dim[1] / 2.0 
-        base1 = Prisim(base1_pos, [prisim1.dim[1]*1.2,prisim1.dim[1]*1.2,prisim1.dim[0]],up=base1_up,facing=prisim1.up, color=[50,50,50])
+        base1 = Prisim(base1_pos, [prisim1.dim[1]*1.2,prisim1.dim[1]*1.2,prisim1.dim[0]],up=base1_up,facing=prisim1.up, color=base1_color)
 
-
-        prisim2 = Prisim(pos_0 + pos_1_0 + pos_2_1, [0.6,0.6,self.L[2]],up=rot_2,facing=facing_2)
+        base2_color = [50,50,50]
+        if self.current_joint_controlled == 2:
+            base2_color = [230,230,245]
+        prisim2 = Prisim(pos_0 + pos_1_0 + pos_2_1, [0.6,0.6,self.L[2]],up=rot_2,facing=facing_2, color=arm_color)
         base2_up = prisim2.facing
         base2_pos = prisim2.pos - base2_up * prisim2.dim[1] / 2.0 
-        base2 = Prisim(base2_pos, [prisim2.dim[1]*1.2,prisim2.dim[1]*1.2,prisim2.dim[0]],up=base2_up,facing=prisim2.up, color=[50,50,50])
+        base2 = Prisim(base2_pos, [prisim2.dim[1]*1.2,prisim2.dim[1]*1.2,prisim2.dim[0]],up=base2_up,facing=prisim2.up, color=base2_color)
 
-        prisim3 = Prisim(pos_0 + pos_1_0 + pos_2_1 + pos_3_2, [0.4,0.4,self.L[3]],up=rot_3,facing=facing_3)
+
+        base3_color = [50,50,50]
+        if self.current_joint_controlled == 3:
+            base3_color = [230,230,245]
+        prisim3 = Prisim(pos_0 + pos_1_0 + pos_2_1 + pos_3_2, [0.4,0.4,self.L[3]],up=rot_3,facing=facing_3,color=arm_color)
         base3_up = prisim3.facing
         base3_pos = prisim3.pos - base3_up * prisim3.dim[1] / 2.0 
-        base3 = Prisim(base3_pos, [prisim3.dim[1]*1.2,prisim3.dim[1]*1.2,prisim3.dim[0]],up=base3_up,facing=prisim3.up, color=[50,50,50])
+        base3 = Prisim(base3_pos, [prisim3.dim[1]*1.2,prisim3.dim[1]*1.2,prisim3.dim[0]],up=base3_up,facing=prisim3.up, color=base3_color)
 
 
         for triangle in prisim0.mesh_triangles:
@@ -546,6 +561,94 @@ class Skybox:
         triangle1 = Triangle([c2,c3,c0],[200,200,240])
 
         self.mesh_triangles = [triangle0,triangle1]
+
+class PointGridPlane:
+    def __init__(self):
+
+        self.plane = np.array([0,0,1])
+        self.facing = np.array([1,0,0])
+        self.step_size = 1
+        self.grid_radius = 3
+        self.pos = np.array([0,0,0])
+
+        self.points = []
+        self.generate_points()
+    
+    def generate_points(self):
+
+        self.side_axis = np.cross(self.plane,self.facing)
+
+        for i in range(self.grid_radius * 2 + 1):
+            offset = self.grid_radius
+
+            for j in range(self.grid_radius * 2 + 1):
+
+                self.points.append(self.pos + self.side_axis * (j-offset) + self.facing * (i-offset))
+
+class MenuBackground:
+
+    def __init__(self):
+        self.pos = (0,0)
+
+        self.img = pygame.image.load('./assets/menu_background/bg.png')
+        self.img = pygame.transform.scale(self.img, (constants.WIDTH, constants.HEIGHT))
+
+        self.foreground = pygame.image.load('./assets/menu_background/far-buildings.png')
+        self.foreground = pygame.transform.scale(self.foreground, (constants.WIDTH, constants.HEIGHT))
+
+        self.nearground = pygame.image.load('./assets/menu_background/buildings.png')
+        self.nearground = pygame.transform.scale(self.nearground, (constants.WIDTH, constants.HEIGHT))
+
+        self.buildings = pygame.image.load('./assets/menu_background/skill-foreground.png')
+        self.buildings = pygame.transform.scale(self.buildings, (constants.WIDTH, constants.HEIGHT))
+
+    def render(self, screen):
+
+        screen.blit(self.img, (0,0))
+        screen.blit(self.foreground, (0,0))
+        screen.blit(self.nearground, (0,0))
+        screen.blit(self.buildings, (0,0,))
+
+
+    
+class MenuButton:
+
+    def __init__(self, text = "sample text", pos = (200,100)) -> None:
+        
+        self.text = text
+        self.padding = 10
+        self.height = 40
+
+        self.pos = pos
+
+        self.color = (100,100,100)
+        self.text_color = (255,255,255)
+
+        self.rect = pygame.Rect(0,0,0,0)
+
+
+
+    def render(self, screen,my_font):
+        
+        text_surface = my_font.render(f' {self.text} ', False, self.text_color)
+        text_rect = text_surface.get_rect(center=(self.pos[0],self.pos[1]))
+        self.rect = text_rect
+        pygame.draw.rect(screen,self.color,text_rect)
+        screen.blit(text_surface,text_rect)
+
+    def is_hovered(self, pos) -> bool:
+        if pos[0] >= self.rect.left and pos[0] < self.rect.left + self.rect.width and pos[1] >= self.rect.top and pos[1] < self.rect.top + self.rect.height:
+            self.color = (150,150,150)
+            return True
+        self.color = (100,100,100)
+        return False
+
+
+
+        
+
+
+        
 
             
 

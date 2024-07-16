@@ -5,8 +5,9 @@ import math
 
 import models as models
 
-from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox
+from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground
 
+from render_funcs import CameraDetails
 import constants
 
 class Engine:
@@ -15,11 +16,15 @@ class Engine:
         self.name = name
         self.screen = None
 
+        self.current_view = "GAME"
+
         self.world = World()
         self.camera = Camera()
 
         self.robot = Robot()
         self.current_robot_joint = 0
+
+        self.grid = PointGridPlane()
 
         #list of points to draw after rendering
         self.render_result = []
@@ -38,6 +43,10 @@ class Engine:
             "a": False,
             "d": False,
         }
+
+        self.menu_button = MenuButton("Start Game", (200,200))
+        self.math_button = MenuButton("See the Math", (200,250))
+        self.menu_background = MenuBackground()
 
 
     def populate_world(self):
@@ -74,8 +83,6 @@ class Engine:
         #    self.world.add_triangle(triangle)
 
         
-
-
         triangle = Triangle(
             [[0,2,0],[0,-2,0],[0,0,-2]],[150,150,200]
             )
@@ -100,6 +107,8 @@ class Engine:
         #self.world.triangles = []
         
         self.world.add_triangle(triangle)
+
+
         
     def startup(self):
         print("startup")
@@ -125,14 +134,10 @@ class Engine:
 
     def inputs(self, event):
 
-
         keypress = False
 
         if event.type == pygame.KEYDOWN:
             keypress = True
-
-        
-
 
         if event.key == pygame.K_UP:
             # Handle up key press
@@ -198,27 +203,41 @@ class Engine:
         elif event.key == pygame.K_1:
             if keypress:
                 self.robot.current_joint_controlled = 0
+                self.robot.updated = True
         elif event.key == pygame.K_2:
             if keypress:
                 self.robot.current_joint_controlled = 1
+                self.robot.updated = True
         elif event.key == pygame.K_3:
             if keypress:
                 self.robot.current_joint_controlled = 2
+                self.robot.updated = True
         elif event.key == pygame.K_4:
             if keypress:
                 self.robot.current_joint_controlled = 3
+                self.robot.updated = True
+
+        elif event.key == pygame.K_z:
+            if keypress:
+                self.camera.fov+=1
+        elif event.key == pygame.K_c:
+            if keypress:
+                self.camera.fov-=1
 
 
     def update(self):
 
-        
+        if self.current_view == "MENU":
+            self.menu_button.is_hovered(pygame.mouse.get_pos())
+            self.math_button.is_hovered(pygame.mouse.get_pos())
+
         
         self.camera.update(self.inputs_dict)
 
         self.robot.update(self.inputs_dict)
 
         if self.robot.updated:
-
+            self.robot.generate_arm_mesh()
             self.world.triangles = []
             self.populate_world()
             self.robot.updated = False
@@ -245,187 +264,202 @@ class Engine:
         projection = (dot_product_ab / dot_product_bb) * b
         return projection
     
-    def find_camera_rel_point(self, point):
 
-        camera_to_point = self.camera.pos - point
+    def convert_3d_to_2d_coords(self, camera_details: CameraDetails,point):
 
-        normal_to_plane_of_point = self.project_vector(camera_to_point, self.camera.facing)
+        P_rel_camera = point - camera_details.camera_pos
 
-        deviation = normal_to_plane_of_point - camera_to_point
+        P_rel_camera_height = np.dot(P_rel_camera, camera_details.camera_up)
 
-        
+        P_rel_camera_lateral = np.dot(P_rel_camera, camera_details.camera_horizontal)
 
-        reflect_in_y = point[0] > 0 and self.camera.facing[0] > 0
-        
-
-       
-
-        # get screen x and y values
-        y_component = self.project_vector(deviation, self.camera.up) 
-
-        x_component = deviation - y_component
-
-        direction_of_x = np.dot(x_component,np.cross(self.camera.facing,self.camera.up)) > 0
-
-        final_x_component = np.linalg.norm(x_component) 
-
-        if direction_of_x == False:
-            final_x_component = final_x_component * -1 
-
-        direction_of_y = np.dot(y_component, self.camera.up) > 0
-
-        final_y_component = np.linalg.norm(y_component)
-
-        
-        if direction_of_y == True:
-            final_y_component = final_y_component * -1
-
+        P_rel_camera_depth = np.dot(P_rel_camera, camera_details.camera_normal)
 
         
 
+        P_prime_height = P_rel_camera_height * camera_details.view_dist / P_rel_camera_depth
+        P_prime_lateral = P_rel_camera_lateral * camera_details.view_dist / P_rel_camera_depth
+
+
+
+
+        camera_viewport_width =  2*camera_details.view_dist / math.tan(math.radians(self.camera.fov)) 
+        camera_viewport_height = camera_viewport_width * (720.0 / 1080.0)
+
+
+        camera_x = P_prime_lateral * camera_details.view_width / camera_viewport_width 
+        camera_y = P_prime_height * camera_details.view_height / camera_viewport_height 
+
+        in_viewport = True
+
+        if abs(camera_x) > camera_details.view_width or abs(camera_y) > camera_details.view_height:
+            in_viewport = False
+
+
+        return np.array([camera_x, camera_y]), in_viewport
+    
+    
+    def render_stats(self):
+        text_surface = self.my_font.render(f'Camera pos{self.camera.pos}', False, (0,0,0))
         
-        non_scaled_point = np.array([final_x_component,final_y_component])
+        self.screen.blit(text_surface,(0,0))
+        text_surface = self.my_font.render(f'Camera tilt{self.camera.pitch}', False, (0,0,0))
+        
+        self.screen.blit(text_surface,(0,50))
+        text_surface = self.my_font.render(f'Camera rotation{self.camera.direction}', False, (0,0,0))
+        
+        self.screen.blit(text_surface,(0,100))
 
-        distance_of_plane = np.linalg.norm(normal_to_plane_of_point)
-        scale_factor = 10000000
-        if abs(distance_of_plane) > 0.001:
-            scale_factor = (0.75/distance_of_plane) * constants.WIDTH
+    def cam_coords_to_pygame(self,point):
+        flip_y = np.array([point[0], -point[1]])
+        move_to_center = flip_y + np.array([constants.WIDTH/2.0, constants.HEIGHT/2.0])
 
-
-        scaled_point = non_scaled_point * scale_factor
-
-        return scaled_point
+        return move_to_center
 
     def render(self):
+
+
+
+
+        if self.current_view == "MENU":
+            self.menu_background.render(self.screen)
+
+            self.menu_button.render(self.screen,self.my_font)
+            self.math_button.render(self.screen,self.my_font)
+
+
+            pass
         
-        move_to_center_screen = np.array([constants.WIDTH/2.0, constants.HEIGHT/2.0])
+        elif self.current_view == "GAME":
 
-        # need to process the triangles in the world and figure out
-        # where to draw them relative to the camera
-
-        self.screen.fill((255,255,255))
-
-
-        test_point = np.array([10000,10000,1000])
-
-        test_point_in_camera = self.find_camera_rel_point(test_point)
-
-        test_point_in_camera = test_point_in_camera + move_to_center_screen
-
-        pygame.draw.circle(self.screen,(0,255,0),(test_point_in_camera[0],test_point_in_camera[1]),5)
-
-
-        # render origin point
-
-        origin = self.world.origin
-
-        vec_to_origin = self.camera.pos - origin
-
-        normal_to_plane_of_point = self.project_vector(vec_to_origin, self.camera.facing)
-
-        deviation = normal_to_plane_of_point - vec_to_origin
-
-        non_scaled_point = np.array([deviation[1],deviation[2]])
-
-        distance_of_plane = np.linalg.norm(normal_to_plane_of_point)
-
-        scale_factor = (1/distance_of_plane) * constants.WIDTH
-
-        scaled_point = self.find_camera_rel_point(origin)
+            camera_details = CameraDetails()
+            camera_details.camera_normal = self.camera.facing
+            camera_details.camera_up = self.camera.up
+            camera_details.camera_horizontal = self.camera.get_perpendicular_axis()
+            camera_details.camera_pos = self.camera.pos
+            
 
         
-        
-        
-        final_point = (scaled_point + move_to_center_screen)
-        
-        pygame.draw.circle(self.screen,(255,0,0),(final_point[0],final_point[1]),10)
-
-        for triangle in self.world.triangles:
-            triangle.update_dist_to_camera(self.camera.pos)
-
-        # sort triangles by distance to camera
-        depth_buffer_triangles = sorted(self.world.triangles, key=lambda x: x.dist_to_camera, reverse=True)
-
-        for triangle in depth_buffer_triangles:
-
-
-            # check if i am looking at the triangle (if it is in our field of view)
+            move_to_center_screen = np.array([constants.WIDTH/2.0, constants.HEIGHT/2.0])
 
             
 
-            # do this by getting the line from the camera to each of the points
+            # need to process the triangles in the world and figure out
+            # where to draw them relative to the camera
 
-            in_camera = False
-
-            new_points = []
-
-            for point in triangle.points:
+            self.screen.fill((255,255,255))
 
 
-                camera_to_point = point - self.camera.pos 
-                if np.dot(self.camera.facing, camera_to_point) > 0:
-                    in_camera = True
+            test_point = np.array([0,0,0])
+
+            test_point_in_camera, in_camera = self.convert_3d_to_2d_coords(camera_details, test_point)
+
+            test_point_in_camera = self.cam_coords_to_pygame(test_point_in_camera)
+
+            pygame.draw.circle(self.screen,(255,155,0),(test_point_in_camera[0],test_point_in_camera[1]),5)
+
+
+            #for point in self.grid.points:
+            #    rel_point = self.find_camera_rel_point(point)
+            #    rel_point = rel_point + move_to_center_screen
+            #    pygame.draw.circle(self.screen,(0,255,0),(rel_point[0],rel_point[1]),5)
+
+
+
+            # render origin point
+
+            origin = self.world.origin
+
+            
+
+            for triangle in self.world.triangles:
+                triangle.update_dist_to_camera(self.camera.pos)
+
+            # sort triangles by distance to camera
+            depth_buffer_triangles = sorted(self.world.triangles, key=lambda x: x.dist_to_camera, reverse=True)
+
+            for triangle in depth_buffer_triangles:
+
+
+                # check if i am looking at the triangle (if it is in our field of view)
+
+                
+
+                # do this by getting the line from the camera to each of the points
+
+                in_camera = False
+
+                new_points = []
+
+                for point in triangle.points:
+
+
+                    camera_to_point = point - self.camera.pos 
+                    if np.dot(self.camera.facing, camera_to_point) > 0:
+                        in_camera = True
 
 
 
 
-                new_point = self.find_camera_rel_point(point)
+                    new_point, point_in_camera = self.convert_3d_to_2d_coords(camera_details, point)
 
-                new_point = (new_point + move_to_center_screen)
+                    new_point = self.cam_coords_to_pygame(new_point)
+
+
+                    
+
+                    new_points.append(new_point)
+
+                # get color of triangle
+                lighted_color = triangle.get_lighted_color(self.world.sun_direction,self.camera.pos)
+
+                if in_camera:
+                
+                    pygame.draw.polygon(self.screen,lighted_color,new_points)
+
+                
+
+                
+
+                #pygame.draw.circle(self.screen,(0,255,0),(new_center[0],new_center[1]),1)
+
+
+            pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(constants.WIDTH/2-1,constants.HEIGHT/2-10,2,20))
+            pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(constants.WIDTH/2-10,constants.HEIGHT/2-1,20,2))
+
+            self.render_stats()
+
+            
+
+            # draw robot select bar
+            box_width = 40
+            pos = [constants.WIDTH / 2.0 - len(self.robot.L) / 2.0 * box_width,0]
+
+
+            selected_color = [13,41,63]
+            not_selected_color = [1,22,39]
+
+            selected_text = [162,191,252]
+            not_selected_text = [137,164,187]
+
+            for i in range(len(self.robot.L)):
+
+
+
+                if i == self.robot.current_joint_controlled:
+                    box_color = selected_color
+                    text_color = selected_text
+                else:
+                    box_color = not_selected_color
+                    text_color = not_selected_text
 
 
                 
 
-                new_points.append(new_point)
-
-            # get color of triangle
-            lighted_color = triangle.get_lighted_color(self.world.sun_direction,self.camera.pos)
-
-            if in_camera:
-            
-                pygame.draw.polygon(self.screen,lighted_color,new_points)
-
-            triangle_center = triangle.get_center()
-
-            new_center = (self.find_camera_rel_point(triangle_center) + move_to_center_screen)[0]
-
-            #pygame.draw.circle(self.screen,(0,255,0),(new_center[0],new_center[1]),1)
-
-
-        pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(constants.WIDTH/2-1,constants.HEIGHT/2-10,2,20))
-        pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(constants.WIDTH/2-10,constants.HEIGHT/2-1,20,2))
-
-        
-
-        # draw robot select bar
-        box_width = 40
-        pos = [constants.WIDTH / 2.0 - len(self.robot.L) / 2.0 * box_width,0]
-
-
-        selected_color = [13,41,63]
-        not_selected_color = [1,22,39]
-
-        selected_text = [162,191,252]
-        not_selected_text = [137,164,187]
-
-        for i in range(len(self.robot.L)):
-
-
-
-            if i == self.robot.current_joint_controlled:
-                box_color = selected_color
-                text_color = selected_text
-            else:
-                box_color = not_selected_color
-                text_color = not_selected_text
-
-
-            
-
-            pygame.draw.rect(self.screen,box_color,pygame.Rect(pos[0] + 40 * i,pos[1],40,40))
-            text_surface = self.my_font.render(f'{i+1}', False, text_color)
-            text_rect = text_surface.get_rect(center=(pos[0] + 40 * i + box_width/2.0, pos[1] + box_width / 2.0))
-            self.screen.blit(text_surface,text_rect)
+                pygame.draw.rect(self.screen,box_color,pygame.Rect(pos[0] + 40 * i,pos[1],40,40))
+                text_surface = self.my_font.render(f'{i+1}', False, text_color)
+                text_rect = text_surface.get_rect(center=(pos[0] + 40 * i + box_width/2.0, pos[1] + box_width / 2.0))
+                self.screen.blit(text_surface,text_rect)
 
 
 
@@ -451,6 +485,8 @@ class Engine:
                     elif event.type == pygame.KEYDOWN or event.type == pygame.KEYUP:
                         self.inputs(event)
 
+                
+
                 # update game state
                 self.update()
 
@@ -465,6 +501,6 @@ class Engine:
                 
                 break
 
-            time.sleep(0.02)
-            #clock.tick(30)
+            #time.sleep(0.02)
+            clock.tick(60)
 
