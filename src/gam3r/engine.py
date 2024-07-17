@@ -6,7 +6,7 @@ import helpers
 
 import models as models
 
-from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway
+from game_objs import Camera, World, Triangle, Prisim, Robot, Robot2, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, floor
 
 from render_funcs import CameraDetails
 import constants
@@ -22,7 +22,7 @@ class Engine:
         self.world = World()
         self.camera = Camera()
 
-        self.robot = Robot()
+        self.robot = Robot2()
         self.current_robot_joint = 0
 
         self.grid = PointGridPlane()
@@ -49,6 +49,9 @@ class Engine:
         self.math_button = MenuButton("See the Math", (200,250))
         self.menu_background = MenuBackground()
 
+        self.game_background = pygame.image.load('./assets/game_background.jpg')
+        self.game_background = pygame.transform.scale(self.game_background, (constants.WIDTH, constants.HEIGHT))
+
 
     def populate_world(self):
         
@@ -59,8 +62,8 @@ class Engine:
 
         cube = models.cube()
 
-        for triangle in octahedron:
-            self.world.add_triangle(triangle)
+        #for triangle in octahedron:
+        #    self.world.add_triangle(triangle)
 
         for triangle in cube:
             self.world.add_triangle(Triangle(triangle))
@@ -69,11 +72,11 @@ class Engine:
         prisim = Prisim([-6,3,0],[1,1,4])
         prisim2 = Prisim([-6,3,-4],[4,1,1])
 
-        for triangle in prisim.mesh_triangles:
-            self.world.add_triangle(triangle)
+        #for triangle in prisim.mesh_triangles:
+        #    self.world.add_triangle(triangle)
 
-        for triangle in prisim2.mesh_triangles:
-            self.world.add_triangle(triangle)
+        #for triangle in prisim2.mesh_triangles:
+        #    self.world.add_triangle(triangle)
 
         for triangle in self.robot.mesh_triangles:
             self.world.add_triangle(triangle)
@@ -110,7 +113,12 @@ class Engine:
 
         hall = hallway([0,10,0])
 
-        for triangle in hall:
+        game_floor = floor([-16,-16,-1],8)
+
+        #for triangle in hall:
+        #    self.world.add_triangle(triangle)
+
+        for triangle in game_floor:
             self.world.add_triangle(triangle)
         
         self.world.add_triangle(triangle)
@@ -223,6 +231,18 @@ class Engine:
             if keypress:
                 self.robot.current_joint_controlled = 3
                 self.robot.updated = True
+        elif event.key == pygame.K_5:
+            if keypress:
+                self.robot.current_joint_controlled = 4
+                self.robot.updated = True
+        elif event.key == pygame.K_6:
+            if keypress:
+                self.robot.current_joint_controlled = 5
+                self.robot.updated = True
+        elif event.key == pygame.K_7:
+            if keypress:
+                self.robot.current_joint_controlled = 6
+                self.robot.updated = True
 
         elif event.key == pygame.K_z:
             if keypress:
@@ -230,6 +250,9 @@ class Engine:
         elif event.key == pygame.K_c:
             if keypress:
                 self.camera.fov-=1
+        elif event.key == pygame.K_w:
+            if keypress:
+                self.robot.wiggling = not self.robot.wiggling
 
 
     def update(self):
@@ -345,9 +368,9 @@ class Engine:
         #print(self.camera.pos + 3 * camera_facing)
 
         near_plane = (camera_facing,helpers.signed_dist_to_plane(np.array([0,0,0]),camera_facing,(self.camera.pos + 3 * camera_facing)))
-        far_plane = (-camera_facing,helpers.signed_dist_to_plane(np.array([0,0,0]),-camera_facing,(self.camera.pos + 30 * camera_facing)))
+        far_plane = (-camera_facing,helpers.signed_dist_to_plane(np.array([0,0,0]),-camera_facing,(self.camera.pos + 90 * camera_facing)))
 
-        print(near_plane[1])
+        #print(near_plane[1])
         clipped_triangles = []
 
         for triangle in self.world.triangles:
@@ -397,6 +420,8 @@ class Engine:
             # where to draw them relative to the camera
 
             self.screen.fill((255,255,255))
+
+            self.screen.blit(self.game_background,(0,0))
 
             test_point = np.array([0,0,0])
 

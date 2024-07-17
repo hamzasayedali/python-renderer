@@ -6,7 +6,7 @@ import random
 import pygame
 
 class Camera:
-    def __init__(self, pos = [3.0,0.0,0.0], direction = 180, pitch = 0, fov=60, up=[0,0,1]):
+    def __init__(self, pos = [34.0,0.0,6.0], direction = 180, pitch = 0, fov=60, up=[0,0,1]):
         # vec3 for point of reference
         self.pos = np.array(pos)
         # rotation about z axis in degrees
@@ -143,10 +143,10 @@ class Camera:
             self.set_pitch(self.pitch - constants.TURN_SPEED)
 
     
-    def update(self, inputs):
+    def update(self, inputs, orbit_facing = [0,0,0]):
         
         if self.is_orbiting:
-            self.orbit([-5,-5,-3])
+            self.orbit([0,0,0], orbit_facing)
 
 
         # call functions based on current input status
@@ -184,7 +184,7 @@ class Camera:
             pass
         
 
-    def orbit(self, orbit_point):
+    def orbit(self, orbit_point, orbit_facing = [0,0,0]):
         # face the origin
 
         # do the camera movement
@@ -211,7 +211,7 @@ class Camera:
         self.pos = np.array([new_pos_in_xy[0], new_pos_in_xy[1], self.pos[2]])
         #print(f"POSITION: {self.pos} END")
 
-        direction_to_orbit = self.pos - np.array(orbit_point)
+        direction_to_orbit = self.pos - np.array(orbit_facing)
 
         angle = helpers.angle_between_vectors_degrees([direction_to_orbit[0],direction_to_orbit[1],0],[1,0,0])
 
@@ -278,7 +278,7 @@ class World:
     def __init__(self):
         self.triangles = []
         self.origin = np.array([0,0,0])
-        self.sun_direction = np.array([10,100,-10])
+        self.sun_direction = np.array([100,100,100])
 
         self.is_sunrising = False
         self.sun_velocity = 10
@@ -396,13 +396,160 @@ def get_rot_matrix(axis, theta):
         [uz * ux * one_minus_cos_theta - uy * sin_theta, uz * uy * one_minus_cos_theta + ux * sin_theta, cos_theta + uz**2 * one_minus_cos_theta]
     ])
 
+
+class Robot2:
+    def __init__(self):
+        self.base_frame = [0,0,0]
+
+        self.L =  [4,5,4,3,4,5,3]
+        
+
+        self.theta0 =       [math.pi/4, math.pi/8, math.pi/8, math.pi/2,0,0,0,0]
+        
+        self.joint_types=   ["R"]
+        self.joint_axes=    [[0,0,1],[0,1,0],[0,0,1],[1,0,0],[0,0,1],[0,1,0],[1,0,0]]
+
+        self.up = [0,0,1]
+        self.facing = [1,0,0]
+
+        self.current_joint_controlled = 0
+
+        self.mesh_triangles = []
+
+        self.end_effector_pos = [0,0,0]
+
+        self.generate_arm_mesh()
+
+        self.updated = False
+
+        self.wiggling = False
+
+        self.wiggling_selected = []
+        self.wiggling_direction = []
+
+        for i in range(len(self.L)):
+            self.wiggling_selected.append(False)
+            self.wiggling_direction.append(random.randint(0,1) * 2 - 1)
+
+
+    def update(self, inputs):
+        # max arm speed is ROBOT_ROT_SPEED, min arm speed is 0.5 that, diminises as arm gets longer
+        
+        if self.wiggling:
+            change = random.randint(0,100)
+            if change < 10:
+                joint = random.randint(0,len(self.L)-1) 
+                self.wiggling_selected[joint] = not self.wiggling_selected[joint] 
+
+            for i in range(len(self.L)):
+                if change % 15 == 0:
+                    self.wiggling_direction[i] *= -1
+                if self.wiggling_selected[i]:
+
+                    total_length = np.sum(self.L[i:])
+                    arm_rot_speed = constants.ROBOT_ROT_SPEED * (0.2 + 0.8 * 1/total_length)
+
+                    
+                    self.rotate_joint(i, arm_rot_speed * self.wiggling_direction[i])
+                    
+
+            self.updated = True
+
+        else:
+            total_length = np.sum(self.L[self.current_joint_controlled:])
+            arm_rot_speed = constants.ROBOT_ROT_SPEED * (0.3 + 0.7 * 1/(total_length*total_length))
+
+            if inputs["a"]:
+                
+                self.rotate_joint(self.current_joint_controlled, arm_rot_speed)
+                self.updated = True
+
+            if inputs["d"]:
+                self.rotate_joint(self.current_joint_controlled, -arm_rot_speed)
+                self.updated = True
+
+    def rotate_joint(self, joint_index, delta):
+        self.theta0[joint_index] += delta
+        self.generate_arm_mesh()
+
+    def generate_arm_mesh(self):
+
+        self.mesh_triangles = []
+
+        arm_color = [137,164,187]
+        joint_color = [50,50,50]
+        joint_controlled_color = [230,230,245]
+
+        base_pos = self.base_frame
+        base_rot = self.up
+        base_facing = self.facing
+
+        rotation_matrices = []
+
+        rotations = []
+        facings = []
+        positions = []
+
+        for axis,theta in zip(self.joint_axes, self.theta0):
+            #print(axis," ",theta)
+            matrix = get_rot_matrix(axis,theta)
+            rotation_matrices.append(matrix)
+
+        for i in range(len(self.L)):
+            
+            rot_i = np.dot(rotation_matrices[i],base_rot)
+            facing_i = np.dot(rotation_matrices[i],base_facing)
+
+            for j in range(i):
+                rot_i = np.dot(rotation_matrices[i-(j+1)], rot_i)
+                facing_i = np.dot(rotation_matrices[i-(j+1)], facing_i)
+
+            rotations.append(rot_i)
+            facings.append(facing_i)
+
+        
+
+        positions.append(base_pos)
+        for i in range(len(self.L)):
+            positions.append(positions[i] + rotations[i]*self.L[i])
+
+        self.end_effector_pos = positions[-1]
+
+        for i in range(len(self.L)):
+            #build the prisims
+            prisim0 = Prisim(positions[i], [1,1,self.L[i]], up=rotations[i], facing=facings[i], color=arm_color)
+
+            color = joint_color
+            if self.current_joint_controlled == i:
+                color = joint_controlled_color
+
+            joint0 = Prisim()
+
+
+            joint0_up = prisim0.facing
+            joint0_pos = prisim0.pos - joint0_up * prisim0.dim[1] / 2.0 
+            joint0 = Prisim(joint0_pos, [prisim0.dim[1]*1.2,prisim0.dim[1]*1.2,prisim0.dim[0]],up=joint0_up,facing=prisim0.up, color=color)
+
+            for triangle in prisim0.mesh_triangles:
+                self.mesh_triangles.append(triangle)
+
+            for triangle in joint0.mesh_triangles:
+                self.mesh_triangles.append(triangle)
+
+
+
+        
+            
+
+        
+
 class Robot:
 
     def __init__(self):
 
-        self.base_frame = [-5,-5,-3]
+        self.base_frame = [5,5,0.6]
 
-        self.L =  [4,5,6,2]
+        self.L =  [4,5,4,2]
         self.theta0 =       [math.pi/4, math.pi/8, math.pi/8, math.pi/2]
         self.joint_types=   ["R"]
         self.joint_axes=    [[0,0,1],[0,1,0],[0,0,1],[1,0,0]]
@@ -411,11 +558,15 @@ class Robot:
 
         self.current_joint_controlled = 0
 
+        
+
         self.generate_arm_mesh()
 
         
 
         self.updated = False
+
+        
 
     def update(self, inputs):
 
@@ -445,7 +596,7 @@ class Robot:
         self.mesh_triangles = []
         
         pos_0 = self.base_frame
-        rot_0 = [0,0,-1]
+        rot_0 = [0,0,1]
 
         facing_0 = [1,0,0]
 
@@ -455,7 +606,7 @@ class Robot:
 
         pos_1_0 = rot_0 * self.L[0] 
 
-        rot_1 = [0,0,-1]
+        rot_1 = [0,0,1]
         facing_1 = [1,0,0]
 
         rot_1 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), rot_1))
@@ -463,7 +614,7 @@ class Robot:
 
         pos_2_1 = rot_1 * self.L[1]
 
-        rot_2 = [0,0,-1]
+        rot_2 = [0,0,1]
         facing_2 = [1,0,0]
 
         rot_2 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]),rot_2)))
@@ -471,7 +622,7 @@ class Robot:
         
         pos_3_2 = rot_2 * self.L[2]
 
-        rot_3 = [0,0,-1]
+        rot_3 = [0,0,1]
         facing_3 = [1,0,0]
 
         rot_3 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]),np.dot(get_rot_matrix(self.joint_axes[3],self.theta0[3]),rot_3))))
@@ -663,7 +814,37 @@ def hallway(pos):
 
     return triangles
 
+def floor(pos,num_tiles):
 
+    triangles = []
+    prisims = []
+    size = 4
+
+    color = [84, 54, 99]
+
+    for x in range(num_tiles):
+        for y in range(num_tiles):
+            
+
+            tile_pos = np.array([pos]) + np.array([x,y,0]) * size
+
+
+            point1 = np.ndarray.tolist(tile_pos)[0]
+            point2 = np.ndarray.tolist(tile_pos + size * np.array([1,0,0]))[0]
+            point3 = np.ndarray.tolist(tile_pos + size * np.array([1,1,0]))[0]
+            point4 = np.ndarray.tolist(tile_pos + size * np.array([0,1,0]))[0]
+            
+            triangle1 = Triangle([point1,point2,point3],color)
+            triangle2 = Triangle([point3, point4, point1],color)
+
+            triangles.append(triangle1)
+            triangles.append(triangle2)
+
+            
+   
+
+
+    return triangles
         
 
             

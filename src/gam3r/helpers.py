@@ -20,7 +20,7 @@ def normalize(vec):
 def signed_dist_to_plane(point, plane_normal, point_on_plane):
     D = np.sum(plane_normal * point_on_plane)
 
-    print(plane_normal * point_on_plane)
+    #print(plane_normal * point_on_plane)
 
     dist = (np.sum(plane_normal * point) + D) / math.sqrt(np.sum(plane_normal * plane_normal))
 
