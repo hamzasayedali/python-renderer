@@ -3,10 +3,11 @@ import time
 import numpy as np
 import math
 import helpers
+from numba import njit
 
 import models as models
 
-from game_objs import Camera, World, Triangle, Prisim, Robot, Robot2, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, floor
+from game_objs import Camera, World, Triangle, Prisim, Robot, Robot2, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, floor, Boat, ArmControlGui
 
 from render_funcs import CameraDetails
 import constants
@@ -61,6 +62,11 @@ class Engine:
         octahedron = models.octahedron()
 
         cube = models.cube()
+
+
+        
+
+        
 
         #for triangle in octahedron:
         #    self.world.add_triangle(triangle)
@@ -253,6 +259,17 @@ class Engine:
         elif event.key == pygame.K_w:
             if keypress:
                 self.robot.wiggling = not self.robot.wiggling
+        elif event.key == pygame.K_EQUALS:
+            if keypress:
+                self.robot.add_arm()
+
+        elif event.key == pygame.K_MINUS:
+            if keypress:
+                self.robot.remove_arm()
+
+        elif event.key == pygame.K_r:
+            if keypress:
+                self.robot.load_from_json("robot1.json")
 
 
     def update(self):
@@ -271,6 +288,12 @@ class Engine:
             self.world.triangles = []
             self.populate_world()
             self.robot.updated = False
+
+
+            for i in range(self.robot.L):
+                arm_control_gui = ArmControlGui(index=i)
+
+        
 
 
         self.world.update()
@@ -294,6 +317,8 @@ class Engine:
         projection = (dot_product_ab / dot_product_bb) * b
         return projection
     
+    
+    
 
     def convert_3d_to_2d_coords(self, camera_details: CameraDetails,point):
 
@@ -305,17 +330,13 @@ class Engine:
 
         P_rel_camera_depth = np.dot(P_rel_camera, camera_details.camera_normal)
 
-        
 
         P_prime_height = P_rel_camera_height * camera_details.view_dist / P_rel_camera_depth
         P_prime_lateral = P_rel_camera_lateral * camera_details.view_dist / P_rel_camera_depth
 
 
-
-
         camera_viewport_width =  2*camera_details.view_dist / math.tan(math.radians(self.camera.fov)) 
         camera_viewport_height = camera_viewport_width * (720.0 / 1080.0)
-
 
         camera_x = P_prime_lateral * camera_details.view_width / camera_viewport_width 
         camera_y = P_prime_height * camera_details.view_height / camera_viewport_height 
@@ -390,9 +411,6 @@ class Engine:
 
     def render(self):
 
-
-
-
         if self.current_view == "MENU":
             self.menu_background.render(self.screen)
 
@@ -409,12 +427,6 @@ class Engine:
             camera_details.camera_up = self.camera.up
             camera_details.camera_horizontal = self.camera.get_perpendicular_axis()
             camera_details.camera_pos = self.camera.pos
-            
-
-        
-            move_to_center_screen = np.array([constants.WIDTH/2.0, constants.HEIGHT/2.0])
-
-            
 
             # need to process the triangles in the world and figure out
             # where to draw them relative to the camera
@@ -444,9 +456,6 @@ class Engine:
 
 
                 # check if i am looking at the triangle (if it is in our field of view)
-
-                
-
                 # do this by getting the line from the camera to each of the points
 
                 in_camera = False
@@ -459,9 +468,6 @@ class Engine:
                     camera_to_point = point - self.camera.pos 
                     if np.dot(self.camera.facing, camera_to_point) > 0:
                         in_camera = True
-
-
-
 
                     new_point, point_in_camera = self.convert_3d_to_2d_coords(camera_details, point)
 
@@ -522,6 +528,10 @@ class Engine:
                 text_surface = self.my_font.render(f'{i+1}', False, text_color)
                 text_rect = text_surface.get_rect(center=(pos[0] + 40 * i + box_width/2.0, pos[1] + box_width / 2.0))
                 self.screen.blit(text_surface,text_rect)
+
+
+
+                
 
 
 

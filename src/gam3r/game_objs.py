@@ -5,6 +5,8 @@ import helpers
 import random
 import pygame
 
+import json
+
 class Camera:
     def __init__(self, pos = [34.0,0.0,6.0], direction = 180, pitch = 0, fov=60, up=[0,0,1]):
         # vec3 for point of reference
@@ -441,7 +443,7 @@ class Robot2:
                 joint = random.randint(0,len(self.L)-1) 
                 self.wiggling_selected[joint] = not self.wiggling_selected[joint] 
 
-            for i in range(len(self.L)):
+            for i in range(len(self.L)-1):
                 if change % 15 == 0:
                     self.wiggling_direction[i] *= -1
                 if self.wiggling_selected[i]:
@@ -472,11 +474,62 @@ class Robot2:
         self.theta0[joint_index] += delta
         self.generate_arm_mesh()
 
+    def load_from_json(self, filename):
+        f = open(f"./src/gam3r/robot_specs/{filename}", "r")
+        x = f.read()
+        y = json.loads(x)
+
+        arm_lengths = y["arm_lengths"]
+        joint_axes = y["joint_axes"]
+        theta0 = y["theta0"]
+
+        self.L = arm_lengths
+        self.joint_axes = joint_axes
+        self.theta0 = theta0
+
+        self.generate_arm_mesh()
+        self.updated = True
+
+
+    def add_arm(self,L=4,axis=[0,1,0],theta=math.pi/2.0):
+
+        self.L.append(L)
+        self.joint_axes.append(axis)
+        self.theta0.append(theta)
+
+        self.wiggling_selected.append(False)
+        self.wiggling_direction.append(-1)
+
+        self.generate_arm_mesh()
+        self.updated = True
+
+    def remove_arm(self):
+        self.L.pop()
+        self.joint_axes.pop()
+        self.theta0.pop()
+        self.wiggling_selected.pop()
+        self.wiggling_direction.pop()
+
+        self.generate_arm_mesh()
+        self.updated = True
+
+    def change_arm_lenth(self, index, new_length = 1):
+        self.L[index] = new_length
+        self.generate_arm_mesh()
+        self.updated = True
+    def change_arm_axis(self, index, axis = [1,0,0]):
+        self.joint_axes[index] = axis
+        self.generate_arm_mesh()
+        self.updated = True
+
+
+
+
     def generate_arm_mesh(self):
 
         self.mesh_triangles = []
 
-        arm_color = [137,164,187]
+        arm_color = [212, 198, 49]
         joint_color = [50,50,50]
         joint_controlled_color = [230,230,245]
 
@@ -764,7 +817,7 @@ class MenuBackground:
     
 class MenuButton:
 
-    def __init__(self, text = "sample text", pos = (200,100)) -> None:
+    def __init__(self, text = "sample text", pos = (200,100), height=40) -> None:
         
         self.text = text
         self.padding = 10
@@ -845,6 +898,53 @@ def floor(pos,num_tiles):
 
 
     return triangles
+
+class Boat:
+    def __init__(self,pos=[0,0,0]):
+        self.pos = pos
+        self.facing = [1,0,0]
+        self.up = [0,0,1]
+
+
+        self.mesh_triangles = []
+        self.generate_mesh()
+
+    def generate_mesh(self):
+        
+        self.mesh_triangles = []
+
+        #5 brown prisims as logs
+
+        log_width = 1
+        log_length = 7
+
+        back = np.array(self.pos) - np.array(self.facing) * (log_length / 2)
+        side_axis = np.cross(np.array(self.facing),np.array(self.up))
+
+        for i in range(5):
+
+            log_pos = back + side_axis * (i - 2)*1.1
+            prisim = Prisim([log_pos[0],log_pos[1],log_pos[2]], [log_width,log_width,log_length],self.facing,self.up,color=[79, 60, 20])
+
+            for triangle in prisim.mesh_triangles:
+                self.mesh_triangles.append(triangle)
+
+
+
+
+
+class ArmControlGui:
+    def __init__(self,index):
+        self.index = index
+        self.pos = (constants.WIDTH - 200,index * 50)
+        self.grow_button = MenuButton("+",self.pos,40)
+
+    def update(self, mouse_pos, mouse_click):
+
+        pass
+            
+
+
         
 
             
