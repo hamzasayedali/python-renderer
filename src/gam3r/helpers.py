@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from numba import njit
+import pygame
 
 def angle_between_vectors_degrees(v1, v2, norm=[0,0,1]):
     dot_prod = np.dot(v1, v2)
@@ -26,6 +27,12 @@ def signed_dist_to_plane(point, plane_normal, point_on_plane):
     dist = (np.sum(plane_normal * point) + D) / math.sqrt(np.sum(plane_normal * plane_normal))
 
     return dist
+
+def point_rect_collide(point,rect: pygame.Rect):
+    if point[0] >= rect.left and point[0] <= rect.right and point[1] >=rect.top and point[1] <= rect.bottom:
+        return True 
+    
+    return False
 
 # @njit()
 # def dot_3d(a=[0,0,0],b=[0,0,0]):

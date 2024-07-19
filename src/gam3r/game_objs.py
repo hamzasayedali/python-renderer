@@ -399,7 +399,7 @@ def get_rot_matrix(axis, theta):
     ])
 
 
-class Robot2:
+class Robot:
     def __init__(self):
         self.base_frame = [0,0,0]
 
@@ -426,12 +426,20 @@ class Robot2:
 
         self.wiggling = False
 
+        self.lock_pos = False
+
         self.wiggling_selected = []
         self.wiggling_direction = []
+
+        self.joint_speed = 0.1
+
+        self.desired_pos = self.theta0.copy()
 
         for i in range(len(self.L)):
             self.wiggling_selected.append(False)
             self.wiggling_direction.append(random.randint(0,1) * 2 - 1)
+
+        self.control_buttons = []
 
 
     def update(self, inputs):
@@ -457,6 +465,9 @@ class Robot2:
 
             self.updated = True
 
+        elif self.lock_pos:
+            self.move_to_desired_joint_theta()
+
         else:
             total_length = np.sum(self.L[self.current_joint_controlled:])
             arm_rot_speed = constants.ROBOT_ROT_SPEED * (0.3 + 0.7 * 1/(total_length*total_length))
@@ -469,6 +480,7 @@ class Robot2:
             if inputs["d"]:
                 self.rotate_joint(self.current_joint_controlled, -arm_rot_speed)
                 self.updated = True
+        
 
     def rotate_joint(self, joint_index, delta):
         self.theta0[joint_index] += delta
@@ -522,7 +534,31 @@ class Robot2:
         self.generate_arm_mesh()
         self.updated = True
 
+    def move_to_desired_joint_theta(self):
 
+        theta_des = self.desired_pos
+
+        edited = False
+
+        for i in range(len(self.theta0)):
+            if self.theta0[i] != theta_des[i]:
+                edited = True
+                if self.theta0[i] - theta_des[i] > 0:
+                    self.theta0[i] -= self.joint_speed
+                else:
+                    self.theta0[i] += self.joint_speed
+                
+                if abs(self.theta0[i] - theta_des[i]) < self.joint_speed:
+                    self.theta0[i] = theta_des[i]
+        if edited:
+            self.generate_arm_mesh()
+            self.updated = True
+
+        else:
+            self.lock_pos = False
+                
+
+        
 
 
     def generate_arm_mesh(self):
@@ -590,159 +626,65 @@ class Robot2:
                 self.mesh_triangles.append(triangle)
 
 
+    def update_mouse_clicks(self,mouse_pos):
+        base_pos = [constants.WIDTH / 2.0 - len(self.L) / 2.0 * 40,0]
+        for i in range(len(self.L)):
+            #make plus and minus rects
+            plus_rect = pygame.Rect(base_pos[0]+40 * i,40,20,20)
+            minus_rect = pygame.Rect(base_pos[0]+40 * i + 20,40,20,20)
 
-        
+            if helpers.point_rect_collide(mouse_pos,plus_rect):
+                self.L[i] += 1
+                self.generate_arm_mesh()
+                self.updated = True 
+            if helpers.point_rect_collide(mouse_pos,minus_rect) and self.L[i] > 1:
+                self.L[i] -= 1
+                self.generate_arm_mesh()
+                self.updated = True 
             
 
-        
+    def render_control_bar(self, screen, my_font, icons):
+        # draw robot select bar
+        box_width = 40
+        pos = [constants.WIDTH / 2.0 - len(self.L) / 2.0 * box_width,0]
 
-class Robot:
 
-    def __init__(self):
+        selected_color = [13,41,63]
+        not_selected_color = [1,22,39]
 
-        self.base_frame = [5,5,0.6]
+        selected_text = [162,191,252]
+        not_selected_text = [137,164,187]
 
-        self.L =  [4,5,4,2]
-        self.theta0 =       [math.pi/4, math.pi/8, math.pi/8, math.pi/2]
-        self.joint_types=   ["R"]
-        self.joint_axes=    [[0,0,1],[0,1,0],[0,0,1],[1,0,0]]
+        plus_icon = icons[0]
+        minus_icon = icons[1]
 
-        self.mesh_triangles = []
+        for i in range(len(self.L)):
 
-        self.current_joint_controlled = 0
 
-        
 
-        self.generate_arm_mesh()
+            if i == self.current_joint_controlled:
+                box_color = selected_color
+                text_color = selected_text
+            else:
+                box_color = not_selected_color
+                text_color = not_selected_text
 
-        
 
-        self.updated = False
-
-        
-
-    def update(self, inputs):
-
-        # max arm speed is ROBOT_ROT_SPEED, min arm speed is 0.5 that, diminises as arm gets longer
-        total_length = np.sum(self.L[self.current_joint_controlled:])
-        arm_rot_speed = constants.ROBOT_ROT_SPEED * (0.3 + 0.7 * 1/total_length)
-        if inputs["a"]:
             
-            self.rotate_joint(self.current_joint_controlled, arm_rot_speed)
-            self.updated = True
 
-        if inputs["d"]:
-            self.rotate_joint(self.current_joint_controlled, -arm_rot_speed)
-            self.updated = True
-
-
-
-    def rotate_joint(self, joint_index, delta):
-
-        self.theta0[joint_index] += delta
-        self.generate_arm_mesh()
-
-    def generate_arm_mesh(self):
-
-        arm_color = [137,164,187]
-
-        self.mesh_triangles = []
-        
-        pos_0 = self.base_frame
-        rot_0 = [0,0,1]
-
-        facing_0 = [1,0,0]
-
-        rot_0 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), rot_0)
-        facing_0 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), facing_0)
-        #rotate and then translate
-
-        pos_1_0 = rot_0 * self.L[0] 
-
-        rot_1 = [0,0,1]
-        facing_1 = [1,0,0]
-
-        rot_1 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), rot_1))
-        facing_1 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]),np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), facing_1))
-
-        pos_2_1 = rot_1 * self.L[1]
-
-        rot_2 = [0,0,1]
-        facing_2 = [1,0,0]
-
-        rot_2 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]),rot_2)))
-        facing_2 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]), facing_2)))
-        
-        pos_3_2 = rot_2 * self.L[2]
-
-        rot_3 = [0,0,1]
-        facing_3 = [1,0,0]
-
-        rot_3 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]),np.dot(get_rot_matrix(self.joint_axes[3],self.theta0[3]),rot_3))))
-        facing_3 = np.dot(get_rot_matrix(self.joint_axes[0],self.theta0[0]), np.dot(get_rot_matrix(self.joint_axes[1],self.theta0[1]), np.dot(get_rot_matrix(self.joint_axes[2],self.theta0[2]),np.dot(get_rot_matrix(self.joint_axes[3],self.theta0[3]),facing_3))))
-        
-
-        prisim0 = Prisim(pos_0, [1,1,self.L[0]], up=rot_0, facing=facing_0, color=arm_color)
-
-        base0_color = [50,50,50]
-
-        if self.current_joint_controlled == 0:
-            base0_color = [230,230,245]
-        base0_up = prisim0.facing
-        base0_pos = prisim0.pos - base0_up * prisim0.dim[1] / 2.0 
-        base0 = Prisim(base0_pos, [prisim0.dim[1]*1.2,prisim0.dim[1]*1.2,prisim0.dim[0]],up=base0_up,facing=prisim0.up, color=base0_color)
-
-        prisim1 = Prisim(pos_0 + pos_1_0, [0.8,0.8,self.L[1]],up=rot_1,facing=facing_1,color=arm_color)
-
-        base1_color = [50,50,50]
-        if self.current_joint_controlled == 1:
-            base1_color = [230,230,245]
-        base1_up = prisim1.facing
-        base1_pos = prisim1.pos - base1_up * prisim1.dim[1] / 2.0 
-        base1 = Prisim(base1_pos, [prisim1.dim[1]*1.2,prisim1.dim[1]*1.2,prisim1.dim[0]],up=base1_up,facing=prisim1.up, color=base1_color)
-
-        base2_color = [50,50,50]
-        if self.current_joint_controlled == 2:
-            base2_color = [230,230,245]
-        prisim2 = Prisim(pos_0 + pos_1_0 + pos_2_1, [0.6,0.6,self.L[2]],up=rot_2,facing=facing_2, color=arm_color)
-        base2_up = prisim2.facing
-        base2_pos = prisim2.pos - base2_up * prisim2.dim[1] / 2.0 
-        base2 = Prisim(base2_pos, [prisim2.dim[1]*1.2,prisim2.dim[1]*1.2,prisim2.dim[0]],up=base2_up,facing=prisim2.up, color=base2_color)
+            pygame.draw.rect(screen,box_color,pygame.Rect(pos[0] + 40 * i,pos[1],40,40))
+            pygame.draw.rect(screen,not_selected_color,pygame.Rect(pos[0]+40 * i,40,20,20))
+            screen.blit(plus_icon,(pos[0]+40*i,40))
+            pygame.draw.rect(screen,not_selected_color,pygame.Rect(pos[0]+40 * i + 20,40,20,20))
+            screen.blit(minus_icon,(pos[0]+40*i + 20,40))
+            
+            text_surface = my_font.render(f'{i+1}', False, text_color)
+            text_rect = text_surface.get_rect(center=(pos[0] + 40 * i + box_width/2.0, pos[1] + box_width / 2.0))
+            screen.blit(text_surface,text_rect)
 
 
-        base3_color = [50,50,50]
-        if self.current_joint_controlled == 3:
-            base3_color = [230,230,245]
-        prisim3 = Prisim(pos_0 + pos_1_0 + pos_2_1 + pos_3_2, [0.4,0.4,self.L[3]],up=rot_3,facing=facing_3,color=arm_color)
-        base3_up = prisim3.facing
-        base3_pos = prisim3.pos - base3_up * prisim3.dim[1] / 2.0 
-        base3 = Prisim(base3_pos, [prisim3.dim[1]*1.2,prisim3.dim[1]*1.2,prisim3.dim[0]],up=base3_up,facing=prisim3.up, color=base3_color)
-
-
-        for triangle in prisim0.mesh_triangles:
-            self.mesh_triangles.append(triangle)
-
-        for triangle in base0.mesh_triangles:
-            self.mesh_triangles.append(triangle)
-        
-        for triangle in prisim1.mesh_triangles:
-            self.mesh_triangles.append(triangle)
-
-        for triangle in base1.mesh_triangles:
-            self.mesh_triangles.append(triangle)
-
-        for triangle in prisim2.mesh_triangles:
-            self.mesh_triangles.append(triangle)
-
-        for triangle in base2.mesh_triangles:
-            self.mesh_triangles.append(triangle)
-        
-        for triangle in prisim3.mesh_triangles:
-            self.mesh_triangles.append(triangle)
-
-        for triangle in base3.mesh_triangles:
-            self.mesh_triangles.append(triangle)
     
+
 
 
 class Skybox:

@@ -3,11 +3,10 @@ import time
 import numpy as np
 import math
 import helpers
-from numba import njit
 
 import models as models
 
-from game_objs import Camera, World, Triangle, Prisim, Robot, Robot2, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, floor, Boat, ArmControlGui
+from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, floor, Boat, ArmControlGui
 
 from render_funcs import CameraDetails
 import constants
@@ -23,7 +22,7 @@ class Engine:
         self.world = World()
         self.camera = Camera()
 
-        self.robot = Robot2()
+        self.robot = Robot()
         self.current_robot_joint = 0
 
         self.grid = PointGridPlane()
@@ -52,6 +51,10 @@ class Engine:
 
         self.game_background = pygame.image.load('./assets/game_background.jpg')
         self.game_background = pygame.transform.scale(self.game_background, (constants.WIDTH, constants.HEIGHT))
+
+        self.plus_icon = pygame.image.load('./assets/plus.png')
+        self.minus_icon = pygame.image.load('./assets/minus.png')
+
 
 
     def populate_world(self):
@@ -157,6 +160,16 @@ class Engine:
 
         keypress = False
 
+        
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            
+            mouse_pos = pygame.mouse.get_pos()
+            self.robot.update_mouse_clicks(mouse_pos)
+            return
+
+            
+
         if event.type == pygame.KEYDOWN:
             keypress = True
 
@@ -259,6 +272,9 @@ class Engine:
         elif event.key == pygame.K_w:
             if keypress:
                 self.robot.wiggling = not self.robot.wiggling
+        elif event.key == pygame.K_l:
+            if keypress:
+                self.robot.lock_pos = not self.robot.lock_pos
         elif event.key == pygame.K_EQUALS:
             if keypress:
                 self.robot.add_arm()
@@ -270,6 +286,9 @@ class Engine:
         elif event.key == pygame.K_r:
             if keypress:
                 self.robot.load_from_json("robot1.json")
+
+
+        
 
 
     def update(self):
@@ -290,8 +309,8 @@ class Engine:
             self.robot.updated = False
 
 
-            for i in range(self.robot.L):
-                arm_control_gui = ArmControlGui(index=i)
+            # for i in range(self.robot.L):
+            #     arm_control_gui = ArmControlGui(index=i)
 
         
 
@@ -497,37 +516,42 @@ class Engine:
 
             self.render_stats()
 
-            
+            self.robot.render_control_bar(self.screen,self.my_font, [self.plus_icon,self.minus_icon])
 
-            # draw robot select bar
-            box_width = 40
-            pos = [constants.WIDTH / 2.0 - len(self.robot.L) / 2.0 * box_width,0]
-
-
-            selected_color = [13,41,63]
-            not_selected_color = [1,22,39]
-
-            selected_text = [162,191,252]
-            not_selected_text = [137,164,187]
-
-            for i in range(len(self.robot.L)):
+            # # draw robot select bar
+            # box_width = 40
+            # pos = [constants.WIDTH / 2.0 - len(self.robot.L) / 2.0 * box_width,0]
 
 
+            # selected_color = [13,41,63]
+            # not_selected_color = [1,22,39]
 
-                if i == self.robot.current_joint_controlled:
-                    box_color = selected_color
-                    text_color = selected_text
-                else:
-                    box_color = not_selected_color
-                    text_color = not_selected_text
+            # selected_text = [162,191,252]
+            # not_selected_text = [137,164,187]
+
+            # for i in range(len(self.robot.L)):
+
+
+
+            #     if i == self.robot.current_joint_controlled:
+            #         box_color = selected_color
+            #         text_color = selected_text
+            #     else:
+            #         box_color = not_selected_color
+            #         text_color = not_selected_text
 
 
                 
 
-                pygame.draw.rect(self.screen,box_color,pygame.Rect(pos[0] + 40 * i,pos[1],40,40))
-                text_surface = self.my_font.render(f'{i+1}', False, text_color)
-                text_rect = text_surface.get_rect(center=(pos[0] + 40 * i + box_width/2.0, pos[1] + box_width / 2.0))
-                self.screen.blit(text_surface,text_rect)
+            #     pygame.draw.rect(self.screen,box_color,pygame.Rect(pos[0] + 40 * i,pos[1],40,40))
+            #     pygame.draw.rect(self.screen,not_selected_color,pygame.Rect(pos[0]+40 * i,40,20,20))
+            #     self.screen.blit(self.plus_icon,(pos[0]+40*i,40))
+            #     pygame.draw.rect(self.screen,not_selected_color,pygame.Rect(pos[0]+40 * i + 20,40,20,20))
+            #     self.screen.blit(self.minus_icon,(pos[0]+40*i + 20,40))
+                
+            #     text_surface = self.my_font.render(f'{i+1}', False, text_color)
+            #     text_rect = text_surface.get_rect(center=(pos[0] + 40 * i + box_width/2.0, pos[1] + box_width / 2.0))
+            #     self.screen.blit(text_surface,text_rect)
 
 
 
@@ -545,6 +569,7 @@ class Engine:
 
         # game loop
         while True:
+            start_time = time.time() # start time of the loop
 
             try:
                 #input handling
@@ -554,7 +579,7 @@ class Engine:
                         break
                     
                     # Check for key presses
-                    elif event.type == pygame.KEYDOWN or event.type == pygame.KEYUP:
+                    elif event.type == pygame.KEYDOWN or event.type == pygame.KEYUP or event.type == pygame.MOUSEBUTTONDOWN:
                         self.inputs(event)
 
                 
@@ -573,6 +598,8 @@ class Engine:
                 
                 break
 
-            #time.sleep(0.02)
-            clock.tick(60)
+            time.sleep(0.005)
+            #clock.tick(60)
+            fps = 1.0 / (time.time() - start_time)
+            pygame.display.set_caption(f"FPS: {round(fps,2)}")
 
