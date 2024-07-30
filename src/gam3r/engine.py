@@ -6,7 +6,7 @@ import helpers
 
 import models as models
 
-from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, floor, Boat, ArmControlGui
+from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, floor, Boat, ArmControlGui, Block
 
 from render_funcs import CameraDetails
 import constants
@@ -23,9 +23,14 @@ class Engine:
         self.camera = Camera()
 
         self.robot = Robot()
+        self.block = Block()
         self.current_robot_joint = 0
 
         self.grid = PointGridPlane()
+
+        self.display_developer_info = False
+
+        self.fps = 0
 
         #list of points to draw after rendering
         self.render_result = []
@@ -66,7 +71,10 @@ class Engine:
 
         cube = models.cube()
 
+        
 
+        for triangle in self.block.prisim.mesh_triangles:
+            self.world.add_triangle(triangle)
         
 
         
@@ -285,7 +293,17 @@ class Engine:
 
         elif event.key == pygame.K_r:
             if keypress:
-                self.robot.load_from_json("robot1.json")
+                self.robot.load_from_json("robot2.json")
+
+                print(f"Robot end effector pos: {self.robot.end_effector_pos}")
+        elif event.key == pygame.K_t:
+            if keypress:
+                self.block.locked_to_arm = not self.block.locked_to_arm
+                self.block.pos_to_end_effector = self.block.prisim.pos - self.robot.end_effector_pos
+
+        elif event.key == pygame.K_F3:
+            if keypress:
+                self.display_developer_info = not self.display_developer_info
 
 
         
@@ -301,6 +319,8 @@ class Engine:
         self.camera.update(self.inputs_dict)
 
         self.robot.update(self.inputs_dict)
+
+        self.block.update(self.robot.end_effector_pos,False)
 
         if self.robot.updated:
             self.robot.generate_arm_mesh()
@@ -370,15 +390,18 @@ class Engine:
     
     
     def render_stats(self):
-        text_surface = self.my_font.render(f'Camera pos{self.camera.pos}', False, (0,0,0))
+        text_surface = self.my_font.render(f'Camera pos: {self.camera.pos}', False, (0,0,0))
         
         self.screen.blit(text_surface,(0,0))
-        text_surface = self.my_font.render(f'Camera tilt{self.camera.pitch}', False, (0,0,0))
+        text_surface = self.my_font.render(f'Camera tilt: {round(self.camera.pitch,2)}', False, (0,0,0))
         
         self.screen.blit(text_surface,(0,50))
-        text_surface = self.my_font.render(f'Camera rotation{self.camera.direction}', False, (0,0,0))
+        text_surface = self.my_font.render(f'Camera rotation: {round(self.camera.direction,2)}', False, (0,0,0))
         
         self.screen.blit(text_surface,(0,100))
+        text_surface = self.my_font.render(f'Frame rate {round(self.fps,2)}', False, (0,0,0))
+        
+        self.screen.blit(text_surface,(0,150))
 
     def cam_coords_to_pygame(self,point):
         flip_y = np.array([point[0], -point[1]])
@@ -440,7 +463,8 @@ class Engine:
             pass
         
         elif self.current_view == "GAME":
-
+            
+            
             camera_details = CameraDetails()
             camera_details.camera_normal = self.camera.facing
             camera_details.camera_up = self.camera.up
@@ -514,7 +538,8 @@ class Engine:
             pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(constants.WIDTH/2-1,constants.HEIGHT/2-10,2,20))
             pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(constants.WIDTH/2-10,constants.HEIGHT/2-1,20,2))
 
-            self.render_stats()
+            if self.display_developer_info:
+                self.render_stats()
 
             self.robot.render_control_bar(self.screen,self.my_font, [self.plus_icon,self.minus_icon])
 
@@ -600,6 +625,6 @@ class Engine:
 
             time.sleep(0.005)
             #clock.tick(60)
-            fps = 1.0 / (time.time() - start_time)
-            pygame.display.set_caption(f"FPS: {round(fps,2)}")
+            self.fps = 1.0 / (time.time() - start_time)
+            #pygame.display.set_caption(f"FPS: {round(fps,2)}")
 

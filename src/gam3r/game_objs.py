@@ -324,13 +324,20 @@ class Prisim:
 
 
     
-
+    def set_pos(self, pos):
+        self.pos = pos
+        self.generate_mesh
 
     def compute_perp_axis(self):
         self.perp_axis = np.cross(self.up, self.facing)
         #print(self.perp_axis)
 
-    
+    def contains(self, point):
+        u = self.up
+        v = self.facing
+        w = self.perp_axis
+
+        return True
         
     def generate_mesh(self):
         # using the position and dimensions, generate a mesh of triangles that form the prisim
@@ -559,7 +566,16 @@ class Robot:
                 
 
         
+    def end_effector_pos_from_theta(self, theta):
+        pass
 
+    def ik_from_point(self, point):
+
+        new_theta = self.theta0.copy()
+        for i in range(len(new_theta)):
+            new_theta[i] = new_theta[i]+0.5
+        return new_theta
+        
 
     def generate_arm_mesh(self):
 
@@ -568,6 +584,7 @@ class Robot:
         arm_color = [212, 198, 49]
         joint_color = [50,50,50]
         joint_controlled_color = [230,230,245]
+        end_effector_color = [100,100,200]
 
         base_pos = self.base_frame
         base_rot = self.up
@@ -603,6 +620,14 @@ class Robot:
             positions.append(positions[i] + rotations[i]*self.L[i])
 
         self.end_effector_pos = positions[-1]
+        end_effector_facing = facings[-1]
+        end_effector_up = rotations[-1]
+        end_effector_prisim_pos = self.end_effector_pos - end_effector_up * 0.5
+        end_effector = Prisim(end_effector_prisim_pos,[1.2,1.2,1],up=end_effector_up,facing=end_effector_facing, color = end_effector_color)
+
+        for triangle in end_effector.mesh_triangles:
+            self.mesh_triangles.append(triangle)
+
 
         for i in range(len(self.L)):
             #build the prisims
@@ -684,6 +709,23 @@ class Robot:
 
 
     
+
+class Block:
+    def __init__(self):
+        self.prisim = Prisim([0,0,0],[4,4,4],up=[0,0,1],facing=[1,0,0],color=[150,150,150])
+
+        self.locked_to_arm = True
+
+        self.pos_to_end_effector = [0,0,0]
+        
+    def update(self, end_effector_pos, hold_is_clicked):
+        if self.locked_to_arm:
+            self.prisim.set_pos(end_effector_pos + self.pos_to_end_effector)
+            self.prisim.mesh_triangles = []
+            self.prisim.generate_mesh()
+
+        
+            
 
 
 
