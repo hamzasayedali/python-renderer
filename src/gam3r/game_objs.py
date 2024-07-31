@@ -8,7 +8,7 @@ import pygame
 import json
 
 class Camera:
-    def __init__(self, pos = [34.0,0.0,6.0], direction = 180, pitch = 0, fov=60, up=[0,0,1]):
+    def __init__(self, pos = [34.0,0.0,6.0], direction = 90, pitch = 0, fov=60, up=[0,0,1]):
         # vec3 for point of reference
         self.pos = np.array(pos)
         # rotation about z axis in degrees
@@ -23,9 +23,12 @@ class Camera:
         self.is_orbiting = False
         self.orbit_distance = 5
 
-        self.pitch = pitch
+        self.pitch = 0
+
+        self.set_pitch(pitch)
 
         print(f"FACING: {self.facing[0]} {self.facing[1]}")
+
 
     def get_perpendicular_axis(self):
         axis = np.cross(self.facing, -self.up)
@@ -238,6 +241,16 @@ class Triangle:
         self.middle = (np.array(self.points[0]) + np.array(self.points[1]) + np.array(self.points[2]))/3.0
         return self.middle
     
+    def get_normal(self):
+        #compute the projection of the normal of the triangle to the direction of the sun. Parallel means full color, perpendicular means duller color
+        v1 = np.array(self.points[1]) - np.array(self.points[0])
+        v2 = np.array(self.points[2]) - np.array(self.points[0])
+    
+        # Compute the cross product of the two edge vectors
+        normal_vector = np.cross(v1, v2)
+        normalized_normal = normal_vector / np.linalg.norm(normal_vector)
+        return normalized_normal
+    
     def get_lighted_color(self, sun_position, camera_position):
 
         #figure out if I'm between the triangle and the sun
@@ -280,10 +293,14 @@ class World:
     def __init__(self):
         self.triangles = []
         self.origin = np.array([0,0,0])
-        self.sun_direction = np.array([100,100,100])
+        self.sun_direction = np.array([200,100,50])
+
+        self.entities = []
 
         self.is_sunrising = False
         self.sun_velocity = 10
+
+        self.load_entities()
 
     def add_triangle(self, triangle):
         self.triangles.append(triangle)
@@ -300,6 +317,36 @@ class World:
             
             if abs(self.sun_direction[2]) > 100:
                 self.sun_velocity *= -1
+
+    def load_entities(self):
+
+        self.triangles = []
+        for obj in self.entities:
+            if isinstance(obj, Floor):
+                
+                for triangle in obj.triangles:
+                    self.add_triangle(triangle)
+            if isinstance(obj,Triangle):
+                self.add_triangle(obj)
+
+            if isinstance(obj, Prisim):
+                for triangle in obj.mesh_triangles:
+                    self.add_triangle(triangle)
+
+            if isinstance(obj, Octahedron):
+                for triangle in obj.mesh_triangles:
+                    self.add_triangle(triangle)
+
+            if isinstance(obj, Tetrahedron):
+                for triangle in obj.mesh_triangles:
+                    self.add_triangle(triangle)
+
+            if isinstance(obj, Robot):
+                for triangle in obj.mesh_triangles:
+                    self.add_triangle(triangle)
+
+        print(len(self.triangles))
+
 
 
 
@@ -357,19 +404,29 @@ class Prisim:
         t2 = b2 + self.up * self.dim[2]
         t3 = b3 + self.up * self.dim[2]
 
+        #bottom of prism
         triangle0 = Triangle([b0,b1,b2],base_color=self.color)
         triangle1 = Triangle([b2,b3,b0],base_color=self.color)
-        triangle2 = Triangle([t0,t1,t2],base_color=self.color)
-        triangle3 = Triangle([t2,t3,t0],base_color=self.color)
 
-        triangle4 = Triangle([b0,b1,t1],base_color=self.color)
-        triangle5 = Triangle([t1,t0,b0],base_color=self.color)
+        #top of prism
+        triangle2 = Triangle([t0,t2,t1],base_color=self.color)
+        triangle3 = Triangle([t2,t0,t3],base_color=self.color)
 
-        triangle6 = Triangle([b2,b3,t3],base_color=self.color)
-        triangle7 = Triangle([t3,t2,b2],base_color=self.color)
 
-        triangle8 = Triangle([b1,b2,t2],base_color=self.color)
-        triangle9 = Triangle([t2,t1,b1],base_color=self.color)
+        
+        #side 1
+        triangle4 = Triangle([b0,t1,b1],base_color=self.color)
+        triangle5 = Triangle([t1,b0,t0],base_color=self.color)
+
+        
+        #side 2
+        triangle6 = Triangle([b2,t3,b3],base_color=self.color)
+        triangle7 = Triangle([t3,b2,t2],base_color=self.color)
+
+        
+        #side 3
+        triangle8 = Triangle([b1,t2,b2],base_color=self.color)
+        triangle9 = Triangle([t2,b1,t1],base_color=self.color)
 
         triangle10 = Triangle([b0,b3,t3],base_color=self.color)
         triangle11 = Triangle([t3,t0,b0],base_color=self.color)
@@ -386,6 +443,155 @@ class Prisim:
         self.mesh_triangles.append(triangle9)
         self.mesh_triangles.append(triangle10)
         self.mesh_triangles.append(triangle11)
+
+class Octahedron:
+
+    def __init__(self, pos=[0,0,0], dim=[1,1,4], up=[0,0,1], facing=[1,0,0], color=[45,200,45]):
+        self.pos = np.array(pos)
+        self.dim = np.array(dim)
+
+        self.up = np.array(up)
+        self.facing = np.array(facing)
+
+        self.perp_axis = np.array([0,0,0])
+
+        self.compute_perp_axis()
+
+        self.color = color
+
+        self.mesh_triangles = []
+
+        self.generate_mesh()
+
+
+    
+    def set_pos(self, pos):
+        self.pos = pos
+        self.generate_mesh
+
+    def compute_perp_axis(self):
+        self.perp_axis = np.cross(self.up, self.facing)
+        #print(self.perp_axis)
+
+    def contains(self, point):
+        u = self.up
+        v = self.facing
+        w = self.perp_axis
+
+        return True
+        
+    def generate_mesh(self):
+        # using the position and dimensions, generate a mesh of triangles that form the prisim
+
+        # each prisim needs 12 triangles, 2 per side for 6 sides
+
+        # define corners
+
+        # bottom corners
+        b0 = self.pos - self.facing * self.dim[0] / 2.0 - self.perp_axis * self.dim[1] / 2.0 
+        b1 = b0 + self.facing * self.dim[0] 
+        b2 = b1 + self.perp_axis * self.dim[1]
+        b3 = b2 - self.facing * self.dim[0]
+
+        # top point
+
+        u0 = self.pos + self.up * self.dim[2]
+        d0 = self.pos - self.up * self.dim[2]
+
+        #face 1
+        triangle0 = Triangle([b1,b0,u0],base_color=self.color)
+        triangle1 = Triangle([b2,b1,u0],base_color=self.color)
+
+        #top of prism
+        triangle2 = Triangle([b3,b2,u0],base_color=self.color)
+        triangle3 = Triangle([b0,b3,u0],base_color=self.color)
+
+        #face 1
+        triangle4 = Triangle([b0,b1,d0],base_color=self.color)
+        triangle5 = Triangle([b1,b2,d0],base_color=self.color)
+
+        #top of prism
+        triangle6 = Triangle([b2,b3,d0],base_color=self.color)
+        triangle7 = Triangle([b3,b0,d0],base_color=self.color)
+
+        self.mesh_triangles.append(triangle0)
+        self.mesh_triangles.append(triangle1)
+        self.mesh_triangles.append(triangle2)
+        self.mesh_triangles.append(triangle3)
+        self.mesh_triangles.append(triangle4)
+        self.mesh_triangles.append(triangle5)
+        self.mesh_triangles.append(triangle6)
+        self.mesh_triangles.append(triangle7)
+
+        print(len(self.mesh_triangles))
+
+class Tetrahedron:
+
+    def __init__(self, pos=[0,0,0], dim=[1,1,4], up=[0,0,1], facing=[1,0,0], color=[45,200,45]):
+        self.pos = np.array(pos)
+        self.dim = np.array(dim)
+
+        self.up = np.array(up)
+        self.facing = np.array(facing)
+
+        self.perp_axis = np.array([0,0,0])
+
+        self.compute_perp_axis()
+
+        self.color = color
+
+        self.mesh_triangles = []
+
+        self.generate_mesh()
+
+
+    
+    def set_pos(self, pos):
+        self.pos = pos
+        self.generate_mesh
+
+    def compute_perp_axis(self):
+        self.perp_axis = np.cross(self.up, self.facing)
+        #print(self.perp_axis)
+
+    def contains(self, point):
+        u = self.up
+        v = self.facing
+        w = self.perp_axis
+
+        return True
+        
+    def generate_mesh(self):
+        # using the position and dimensions, generate a mesh of triangles that form the prisim
+
+        # each prisim needs 12 triangles, 2 per side for 6 sides
+
+        # define corners
+
+        # bottom corners
+
+        # points of tetrahedron base at middle of bottom face
+
+
+        b0 = self.pos + self.facing * self.dim[0] / 2.0
+        b1 = self.pos - self.facing * math.cos(math.pi/3) * (self.dim[0] / 2.0) + self.perp_axis * math.sin(math.pi/3) * (self.dim[0] / 2.0)
+        b2 = self.pos - self.facing * math.cos(math.pi/3) * (self.dim[0] / 2.0) - self.perp_axis * math.sin(math.pi/3) * (self.dim[0] / 2.0)
+
+        u0 = self.pos + self.up * self.dim[2]
+
+        triangle0 = Triangle([b1,b0,u0],base_color=self.color)
+        triangle1 = Triangle([b2,b1,u0],base_color=self.color)
+
+        #top of prism
+        triangle2 = Triangle([b0,b2,u0],base_color=self.color)
+        triangle3 = Triangle([b0,b1,b2],base_color=self.color)
+
+        self.mesh_triangles.append(triangle0)
+        self.mesh_triangles.append(triangle1)
+        self.mesh_triangles.append(triangle2)
+        self.mesh_triangles.append(triangle3)
+
+
 
 def get_rot_matrix(axis, theta):
     """
@@ -408,7 +614,7 @@ def get_rot_matrix(axis, theta):
 
 class Robot:
     def __init__(self):
-        self.base_frame = [0,0,0]
+        self.base_frame = [0,0,1]
 
         self.L =  [4,5,4,3,4,5,3]
         
@@ -631,7 +837,7 @@ class Robot:
 
         for i in range(len(self.L)):
             #build the prisims
-            prisim0 = Prisim(positions[i], [1,1,self.L[i]], up=rotations[i], facing=facings[i], color=arm_color)
+            prisim0 = Prisim(positions[i]+rotations[i]*0.6, [1,1,self.L[i]-0.6], up=rotations[i], facing=facings[i], color=arm_color)
 
             color = joint_color
             if self.current_joint_controlled == i:
@@ -641,7 +847,7 @@ class Robot:
 
 
             joint0_up = prisim0.facing
-            joint0_pos = prisim0.pos - joint0_up * prisim0.dim[1] / 2.0 
+            joint0_pos = positions[i] - joint0_up * prisim0.dim[1] / 2.0 
             joint0 = Prisim(joint0_pos, [prisim0.dim[1]*1.2,prisim0.dim[1]*1.2,prisim0.dim[0]],up=joint0_up,facing=prisim0.up, color=color)
 
             for triangle in prisim0.mesh_triangles:
@@ -799,9 +1005,12 @@ class MenuBackground:
 
 
     
+
+def default_onclick():
+    print("Default onclick")
 class MenuButton:
 
-    def __init__(self, text = "sample text", pos = (200,100), height=40) -> None:
+    def __init__(self, text = "sample text", pos = (200,100), height=40, on_click = default_onclick) -> None:
         
         self.text = text
         self.padding = 10
@@ -812,7 +1021,11 @@ class MenuButton:
         self.color = (100,100,100)
         self.text_color = (255,255,255)
 
+        self.hovered = False
+
         self.rect = pygame.Rect(0,0,0,0)
+
+        self.on_click = on_click
 
 
 
@@ -827,13 +1040,44 @@ class MenuButton:
     def is_hovered(self, pos) -> bool:
         if pos[0] >= self.rect.left and pos[0] < self.rect.left + self.rect.width and pos[1] >= self.rect.top and pos[1] < self.rect.top + self.rect.height:
             self.color = (150,150,150)
+            self.hovered = True
             return True
         self.color = (100,100,100)
+        self.hovered = False
+        return False
+    
+    def update_mouse_clicks(self,pos):
+        
+        if self.hovered:
+
+            self.on_click()
+            
+            return True
         return False
 
 
 
+class TextBox:
+    def __init__(self,text = "sample text", pos = (200,100), height=40):
+        self.text = text
+        self.padding = 10
+        self.height = 40
+
+        self.pos = pos
+
+        self.color = (100,100,100)
+        self.text_color = (255,255,255)
+
+        self.rect = pygame.Rect(0,0,0,0)
+
+    def render(self, screen,my_font):
         
+        text_surface = my_font.render(f' {self.text} ', False, self.text_color)
+        text_rect = text_surface.get_rect(center=(self.pos[0],self.pos[1]))
+        self.rect = text_rect
+        pygame.draw.rect(screen,self.color,text_rect)
+        screen.blit(text_surface,text_rect)
+
 
 def hallway(pos):
 
@@ -851,13 +1095,49 @@ def hallway(pos):
 
     return triangles
 
-def floor(pos,num_tiles):
+
+class Floor:
+    def __init__(self, pos,num_tiles,color= [84, 54, 99]):
+        triangles = []
+    
+        size = 4
+
+        
+
+        for x in range(num_tiles):
+            for y in range(num_tiles):
+                
+
+                tile_pos = np.array([pos]) + np.array([x,y,0]) * size
+
+
+                point1 = np.ndarray.tolist(tile_pos)[0]
+                point2 = np.ndarray.tolist(tile_pos + size * np.array([1,0,0]))[0]
+                point3 = np.ndarray.tolist(tile_pos + size * np.array([1,1,0]))[0]
+                point4 = np.ndarray.tolist(tile_pos + size * np.array([0,1,0]))[0]
+                
+                triangle1 = Triangle([point1,point3,point2],color)
+                triangle2 = Triangle([point3, point1, point4],color)
+
+                triangles.append(triangle1)
+                triangles.append(triangle2)
+                triangle1 = Triangle([point1,point2,point3],color)
+                triangle2 = Triangle([point3, point4, point1],color)
+
+                triangles.append(triangle1)
+                triangles.append(triangle2)
+
+        self.triangles = triangles
+
+        print(len(self.triangles))
+
+def floor(pos,num_tiles,color= [84, 54, 99]):
 
     triangles = []
-    prisims = []
+    
     size = 4
 
-    color = [84, 54, 99]
+     
 
     for x in range(num_tiles):
         for y in range(num_tiles):

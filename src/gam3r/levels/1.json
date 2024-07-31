@@ -1,0 +1,21 @@
+{
+    "level_name": "3D Shapes",
+    "camera_position": [43.2850,-15.32,21.47],
+    "camera_direction": 160.5,
+    "camera_tilt": -16,
+    "camera_FOV": 90,
+
+    "floor": {
+        "origin" : [-16,-16,1],
+        "tile_count": 8,
+        "color": [200,100,200]
+
+    },
+
+    "objects": {
+        
+
+    }
+
+
+}

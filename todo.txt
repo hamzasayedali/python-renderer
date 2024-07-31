@@ -1,0 +1,15 @@
+[] Level loading
+
+-> Camera position/orientation
+-> World objects
+- Floor
+- Skybox
+- Robot
+- Triangles
+- Prisms
+- Light Source
+-> Level specific GUI
+- On screen buttons
+-> Level specific functionality
+- Custom camera path
+- Limited inputs

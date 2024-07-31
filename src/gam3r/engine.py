@@ -3,10 +3,12 @@ import time
 import numpy as np
 import math
 import helpers
+import json
+import random
 
 import models as models
 
-from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, floor, Boat, ArmControlGui, Block
+from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, Floor, Boat, ArmControlGui, Block, TextBox, Octahedron, Tetrahedron
 
 from render_funcs import CameraDetails
 import constants
@@ -17,23 +19,41 @@ class Engine:
         self.name = name
         self.screen = None
 
-        self.current_view = "GAME"
+        self.current_view = "MENU"
+
+        self.current_level = 0
+        self.current_level_name = "Sample Level"
+
+        self.num_levels = 3
+
+        
+
+        # store all the buttons that are on the screen currently, 
+        # can loop through when the mouse is clicked to check for collisions and trigger the required functions.
+        self.buttons = [
+            MenuButton("Next Level", (constants.WIDTH/2.0 + 300,constants.HEIGHT-40),40,self.level_increment),
+            MenuButton("Prev Level", (constants.WIDTH/2.0 - 300,constants.HEIGHT-40),40,self.level_decrement)
+        ]
+
+        self.level_1_buttons = [
+            MenuButton("Cube", (200,20),40,on_click=self.select_cube),
+            MenuButton("Tetrahedron", (200,60),40,on_click=self.select_tetrahedron),
+            MenuButton("Octahedron", (200,100),40,on_click=self.select_octahedron),
+            
+        ]
 
         self.world = World()
         self.camera = Camera()
+
+        self.load_level_info(self.current_level)
 
         self.robot = Robot()
         self.block = Block()
         self.current_robot_joint = 0
 
-        self.grid = PointGridPlane()
-
         self.display_developer_info = False
 
         self.fps = 0
-
-        #list of points to draw after rendering
-        self.render_result = []
 
         self.inputs_dict = {
             "LEFT": False,
@@ -52,7 +72,11 @@ class Engine:
 
         self.menu_button = MenuButton("Start Game", (200,200))
         self.math_button = MenuButton("See the Math", (200,250))
+
+        self.return_to_menu_button = MenuButton("<-", (constants.WIDTH - 25,25))
         self.menu_background = MenuBackground()
+
+
 
         self.game_background = pygame.image.load('./assets/game_background.jpg')
         self.game_background = pygame.transform.scale(self.game_background, (constants.WIDTH, constants.HEIGHT))
@@ -61,8 +85,143 @@ class Engine:
         self.minus_icon = pygame.image.load('./assets/minus.png')
 
 
+    def load_level_info(self, level):
+        f = open(f"./src/gam3r/levels/{level}.json", "r")
+        x = f.read()
+        y = json.loads(x)
+
+        camera_position = y["camera_position"]
+        camera_direction = y["camera_direction"]
+        camera_tilt = y["camera_tilt"]
+        camera_FOV = y["camera_FOV"]
+
+        level_name = y["level_name"]
+
+        self.current_level_name = level_name
+
+        
+
+        self.camera = Camera(pos=camera_position, direction=camera_direction,pitch=camera_tilt)
+
+        floor = Floor(y["floor"]["origin"],y["floor"]["tile_count"],y["floor"]["color"])
+
+
+        print(y["floor"]["origin"])
+        self.world = World()
+
+        self.world.entities.append(floor)
+
+
+        if level == 0:
+
+            triangle = Triangle(
+            [[0,2,0],[0,-2,0],[0,0,2]],[150,150,200]
+            )
+            self.world.entities.append(triangle)
+
+            triangle2 = Triangle(
+            [[-2,4,0],[-2,2,0],[-2,3,2]],[250,150,200]
+            )
+            self.world.entities.append(triangle2)
+
+            triangle3 = Triangle(
+            [[-2,-4,0],[-2,-2,0],[-2,-3,2]],[50,150,100]
+            )
+            self.world.entities.append(triangle3)
+
+            triangle4 = Triangle(
+            [[-6,4,0],[-6,2,0],[-6,3,2]],[67,214,30]
+            )
+            self.world.entities.append(triangle4)
+
+            triangle5 = Triangle(
+            [[-6,-4,0],[-6,-2,0],[-6,-3,2]],[90,75,118]
+            )
+            self.world.entities.append(triangle5)
+
+        if level == 1:
+
+            cube = Prisim([0,0,3],[2,2,2],[0,0,1],[1,0,0],[23,76,130])
+
+            self.world.entities.append(cube)
+
+        if level == 2:
+
+            self.world.entities.append(self.robot)
+
+        
+
+    def level_increment(self):
+        print(f"Current level is {self.current_level}")
+        if self.current_level < self.num_levels - 1:
+            self.current_level += 1
+            self.update_level()
+            print(f"Next level is {self.current_level}")
+        else:
+            print("This is the last level")
+
+    def level_decrement(self):
+        print(f"Current level is {self.current_level}")
+        if self.current_level > 0:
+            self.current_level -= 1
+            self.update_level()
+            print(f"Next level is {self.current_level}")
+        else:
+            print("This is the first level")
+
+    def update_level(self):
+        self.load_level_info(self.current_level)
+        self.populate_world()
+
+
+    def select_cube(self):
+
+        new_entities = []
+        for obj in self.world.entities:
+            if isinstance(obj, Floor):
+                new_entities.append(obj)
+        cube = Prisim([0,0,5],[2,2,2],[0,0,1],[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)])
+        new_entities.append(cube)
+        self.world.entities = new_entities
+        self.world.triangles = []
+        self.populate_world()
+        print("Cube!")
+    def select_octahedron(self):
+        new_entities = []
+        for obj in self.world.entities:
+            if isinstance(obj, Floor):
+                new_entities.append(obj)
+        octahedron = Octahedron([0,0,10],[2,2,4],helpers.normalize(np.array([0,0.5,1])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)])
+        new_entities.append(octahedron)
+        self.world.entities = new_entities
+        self.world.triangles = []
+        self.populate_world()
+        
+    def select_tetrahedron(self):
+        new_entities = []
+        for obj in self.world.entities:
+            if isinstance(obj, Floor):
+                new_entities.append(obj)
+        tetrahedron = Tetrahedron([0,0,5],[6,2,4],helpers.normalize(np.array([0,0,1])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)])
+        new_entities.append(tetrahedron)
+        self.world.entities = new_entities
+        self.world.triangles = []
+        self.populate_world()
+        print("Tetrahedron!")
+    def select_dodecahedron(self):
+        print("Dodecahedron!")
+    def select_icosahedron(self):
+        print("Icosahedron!")
+
 
     def populate_world(self):
+        self.world.load_entities()
+
+        print(len(self.world.triangles))
+
+    def populate_world_2(self):
+
+        
         
         # test objects to add to the world
         # triangle located at the origin in then y-z plane
@@ -71,14 +230,9 @@ class Engine:
 
         cube = models.cube()
 
-        
-
         for triangle in self.block.prisim.mesh_triangles:
             self.world.add_triangle(triangle)
         
-
-        
-
         #for triangle in octahedron:
         #    self.world.add_triangle(triangle)
 
@@ -130,12 +284,12 @@ class Engine:
 
         hall = hallway([0,10,0])
 
-        game_floor = floor([-16,-16,-1],8)
+        game_floor = Floor([-16,-16,-1],8)
 
         #for triangle in hall:
         #    self.world.add_triangle(triangle)
 
-        for triangle in game_floor:
+        for triangle in game_floor.triangles:
             self.world.add_triangle(triangle)
         
         self.world.add_triangle(triangle)
@@ -154,7 +308,7 @@ class Engine:
 
             pygame.font.init() # you have to call this at the start, 
                    # if you want to use this module.
-            self.my_font = pygame.font.SysFont('Comic Sans MS', 30)
+            self.my_font = pygame.font.SysFont('Arial', 30)
         
         except Exception as e:
             print(e)
@@ -162,6 +316,8 @@ class Engine:
 
         # startup functions.
         self.populate_world()
+
+        print(len(self.world.triangles))
 
 
     def inputs(self, event):
@@ -174,6 +330,27 @@ class Engine:
             
             mouse_pos = pygame.mouse.get_pos()
             self.robot.update_mouse_clicks(mouse_pos)
+
+            if self.current_view == "MENU":
+                start_is_clicked = self.menu_button.update_mouse_clicks(mouse_pos)
+                if start_is_clicked:
+                    self.current_view = "GAME"
+                self.math_button.update_mouse_clicks(mouse_pos)
+
+            elif self.current_view == "GAME":
+                exit_is_clicked = self.return_to_menu_button.update_mouse_clicks(mouse_pos)
+                if exit_is_clicked:
+                    self.current_view = "MENU"
+
+
+            for button in self.buttons:
+                button.update_mouse_clicks(mouse_pos)
+
+
+            if self.current_level == 1:
+                for button in self.level_1_buttons:
+                    button.update_mouse_clicks(mouse_pos)
+                    
             return
 
             
@@ -306,31 +483,63 @@ class Engine:
                 self.display_developer_info = not self.display_developer_info
 
 
-        
-
-
     def update(self):
 
+
+
+
+        
+        self.menu_button.hovered = False
+        self.math_button.hovered = False
+        self.return_to_menu_button.hovered = False
         if self.current_view == "MENU":
             self.menu_button.is_hovered(pygame.mouse.get_pos())
             self.math_button.is_hovered(pygame.mouse.get_pos())
 
+        if self.current_view == "GAME":
+            self.return_to_menu_button.is_hovered(pygame.mouse.get_pos())
+            
+
+        for button in self.buttons:
+            button.is_hovered(pygame.mouse.get_pos())
+
+        if self.current_level == 1:
+            for button in self.level_1_buttons:
+                button.is_hovered(pygame.mouse.get_pos())
         
         self.camera.update(self.inputs_dict)
 
-        self.robot.update(self.inputs_dict)
-
-        self.block.update(self.robot.end_effector_pos,False)
-
-        if self.robot.updated:
-            self.robot.generate_arm_mesh()
-            self.world.triangles = []
-            self.populate_world()
-            self.robot.updated = False
 
 
-            # for i in range(self.robot.L):
-            #     arm_control_gui = ArmControlGui(index=i)
+
+
+
+
+
+        if self.current_level == 2:
+            self.robot.update(self.inputs_dict)
+
+            #self.block.update(self.robot.end_effector_pos,False)
+
+            if self.robot.updated:
+                self.robot.generate_arm_mesh()
+
+                new_entities = []
+                for obj in self.world.entities:
+                    if not isinstance(obj,Robot):
+                        new_entities.append(obj)
+                new_entities.append(self.robot)
+
+                self.world.entities = new_entities
+
+                
+                self.world.triangles = []
+                self.populate_world()
+                self.robot.updated = False
+
+
+                #for i in range(len(self.robot.L)):
+                #    arm_control_gui = ArmControlGui(index=i)
 
         
 
@@ -449,6 +658,19 @@ class Engine:
                 clipped_triangles.append(triangle)
 
         return clipped_triangles
+    
+    def remove_not_facing_triangles(self, triangles):
+        result = []
+        camera_facing = helpers.normalize(self.camera.facing)
+
+        for triangle in triangles:
+            #if np.dot(camera_facing, triangle.get_normal()) > 0:
+            if np.dot(triangle.get_normal(),triangle.get_center()-self.camera.pos) > 0:
+                result.append(triangle)
+
+        return result
+
+
 
 
     def render(self):
@@ -465,6 +687,7 @@ class Engine:
         elif self.current_view == "GAME":
             
             
+
             camera_details = CameraDetails()
             camera_details.camera_normal = self.camera.facing
             camera_details.camera_up = self.camera.up
@@ -478,24 +701,23 @@ class Engine:
 
             self.screen.blit(self.game_background,(0,0))
 
-            test_point = np.array([0,0,0])
-
-            test_point_in_camera, in_camera = self.convert_3d_to_2d_coords(camera_details, test_point)
-
-            test_point_in_camera = self.cam_coords_to_pygame(test_point_in_camera)
-
-            pygame.draw.circle(self.screen,(255,155,0),(test_point_in_camera[0],test_point_in_camera[1]),5)
             
             clipped_triangles = self.clip_scene()
+
+            facing_triangles = self.remove_not_facing_triangles(clipped_triangles)
             
 
-            for triangle in clipped_triangles:
+            for triangle in facing_triangles:
                 triangle.update_dist_to_camera(self.camera.pos)
+                
 
             # sort triangles by distance to camera
-            depth_buffer_triangles = sorted(clipped_triangles, key=lambda x: x.dist_to_camera, reverse=True)
+            depth_buffer_triangles = sorted(facing_triangles, key=lambda x: x.dist_to_camera, reverse=True)
 
             for triangle in depth_buffer_triangles:
+
+                #print(np.dot(triangle.get_normal(),self.camera.facing))
+                #print(np.dot(triangle.get_normal(),triangle.get_center()-self.camera.pos))
 
 
                 # check if i am looking at the triangle (if it is in our field of view)
@@ -504,6 +726,14 @@ class Engine:
                 in_camera = False
 
                 new_points = []
+
+
+                # check if the triangle is facing me, e.g. the normal of the triangle
+                # dotted with the normal of the camera to the triangle
+                # is positive
+
+                
+
 
                 for point in triangle.points:
 
@@ -528,9 +758,9 @@ class Engine:
                 
                     pygame.draw.polygon(self.screen,lighted_color,new_points)
 
-                
+            
 
-                
+            
 
                 #pygame.draw.circle(self.screen,(0,255,0),(new_center[0],new_center[1]),1)
 
@@ -538,45 +768,27 @@ class Engine:
             pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(constants.WIDTH/2-1,constants.HEIGHT/2-10,2,20))
             pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(constants.WIDTH/2-10,constants.HEIGHT/2-1,20,2))
 
+            
+
+            if self.current_level == 2:
+
+                self.robot.render_control_bar(self.screen,self.my_font, [self.plus_icon,self.minus_icon])
+
             if self.display_developer_info:
                 self.render_stats()
 
-            self.robot.render_control_bar(self.screen,self.my_font, [self.plus_icon,self.minus_icon])
+            self.return_to_menu_button.render(self.screen,self.my_font)
 
-            # # draw robot select bar
-            # box_width = 40
-            # pos = [constants.WIDTH / 2.0 - len(self.robot.L) / 2.0 * box_width,0]
+            for button in self.buttons:
+                button.render(self.screen,self.my_font)
 
-
-            # selected_color = [13,41,63]
-            # not_selected_color = [1,22,39]
-
-            # selected_text = [162,191,252]
-            # not_selected_text = [137,164,187]
-
-            # for i in range(len(self.robot.L)):
+            if self.current_level == 1:
+                for button in self.level_1_buttons:
+                    button.render(self.screen,self.my_font)
 
 
-
-            #     if i == self.robot.current_joint_controlled:
-            #         box_color = selected_color
-            #         text_color = selected_text
-            #     else:
-            #         box_color = not_selected_color
-            #         text_color = not_selected_text
-
-
-                
-
-            #     pygame.draw.rect(self.screen,box_color,pygame.Rect(pos[0] + 40 * i,pos[1],40,40))
-            #     pygame.draw.rect(self.screen,not_selected_color,pygame.Rect(pos[0]+40 * i,40,20,20))
-            #     self.screen.blit(self.plus_icon,(pos[0]+40*i,40))
-            #     pygame.draw.rect(self.screen,not_selected_color,pygame.Rect(pos[0]+40 * i + 20,40,20,20))
-            #     self.screen.blit(self.minus_icon,(pos[0]+40*i + 20,40))
-                
-            #     text_surface = self.my_font.render(f'{i+1}', False, text_color)
-            #     text_rect = text_surface.get_rect(center=(pos[0] + 40 * i + box_width/2.0, pos[1] + box_width / 2.0))
-            #     self.screen.blit(text_surface,text_rect)
+            TextBox(text=f"Level {self.current_level+1}: {self.current_level_name}", pos=(constants.WIDTH/2.0,constants.HEIGHT-40)).render(self.screen,self.my_font)
+            
 
 
 
@@ -623,8 +835,8 @@ class Engine:
                 
                 break
 
-            time.sleep(0.005)
-            #clock.tick(60)
+            #time.sleep(0.005)
+            clock.tick(60)
             self.fps = 1.0 / (time.time() - start_time)
             #pygame.display.set_caption(f"FPS: {round(fps,2)}")
 

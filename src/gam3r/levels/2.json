@@ -1,0 +1,21 @@
+{
+    "level_name": "Robot",
+    "camera_position": [-34.2850,0.0,15.47],
+    "camera_direction": 0,
+    "camera_tilt": -16,
+    "camera_FOV": 90,
+
+    "floor": {
+        "origin" : [-16,-16,0],
+        "tile_count": 8,
+        "color": [80,90,100]
+
+    },
+
+    "objects": {
+        
+
+    }
+
+
+}

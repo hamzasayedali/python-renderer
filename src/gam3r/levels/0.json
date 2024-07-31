@@ -1,0 +1,21 @@
+{
+    "level_name": "Triangles",
+    "camera_position": [7.0,0.0,1.0],
+    "camera_direction": 180,
+    "camera_tilt": 0,
+    "camera_FOV": 90,
+
+    "floor": {
+        "origin" : [-16,-16,-20],
+        "tile_count": 8,
+        "color": [100,100,200]
+
+    },
+
+    "objects": {
+        
+
+    }
+
+
+}
