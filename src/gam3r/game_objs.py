@@ -341,6 +341,13 @@ class World:
                 for triangle in obj.mesh_triangles:
                     self.add_triangle(triangle)
 
+            if isinstance(obj, Icosahedron):
+                for triangle in obj.mesh_triangles:
+                    self.add_triangle(triangle)
+            if isinstance(obj, ObjFile):
+                for triangle in obj.mesh_triangles:
+                    self.add_triangle(triangle)
+
             if isinstance(obj, Robot):
                 for triangle in obj.mesh_triangles:
                     self.add_triangle(triangle)
@@ -592,6 +599,122 @@ class Tetrahedron:
         self.mesh_triangles.append(triangle3)
 
 
+class Icosahedron:
+
+    def __init__(self, pos=[0,0,0], dim=[1,1,4], up=[0,0,1], facing=[1,0,0], color=[45,200,45]):
+        self.pos = np.array(pos)
+        self.dim = np.array(dim)
+
+        self.up = np.array(up)
+        self.facing = np.array(facing)
+
+        self.perp_axis = np.array([0,0,0])
+
+        self.compute_perp_axis()
+
+        self.color = color
+
+        self.mesh_triangles = []
+
+        self.generate_mesh()
+
+
+    
+    def set_pos(self, pos):
+        self.pos = pos
+        self.generate_mesh
+
+    def compute_perp_axis(self):
+        self.perp_axis = np.cross(self.up, self.facing)
+        #print(self.perp_axis)
+
+    def contains(self, point):
+        u = self.up
+        v = self.facing
+        w = self.perp_axis
+
+        return True
+        
+    def generate_mesh(self):
+        # using the position and dimensions, generate a mesh of triangles that form the prisim
+
+        # each prisim needs 12 triangles, 2 per side for 6 sides
+
+        # define corners
+
+        # bottom corners
+
+        # points of tetrahedron base at middle of bottom face
+
+        triangles = helpers.parse_obj_to_triangles("icosahedron.obj",pos=self.pos,scale=3,invert_mesh=True)
+
+        for triangle in triangles:
+
+            
+            triangle0 = Triangle(triangle,base_color=self.color)
+            self.mesh_triangles.append(triangle0)
+
+
+class ObjFile:
+    def __init__(self, pos=[0,0,0], dim=[1,1,4], up=[0,0,1], facing=[1,0,0], color=[45,200,45],filename=None, scale=1,invert_mesh=False):
+        self.pos = np.array(pos)
+        self.dim = np.array(dim)
+
+        self.up = np.array(up)
+        self.facing = np.array(facing)
+
+        self.perp_axis = np.array([0,0,0])
+
+        self.compute_perp_axis()
+
+        self.color = color
+        self.scale = scale
+        self.invert_mesh = invert_mesh
+        self.filename = filename
+
+        self.mesh_triangles = []
+
+        self.generate_mesh()
+
+
+    
+    def set_pos(self, pos):
+        self.pos = pos
+        self.generate_mesh
+
+    def compute_perp_axis(self):
+        self.perp_axis = np.cross(self.up, self.facing)
+        #print(self.perp_axis)
+
+    def contains(self, point):
+        u = self.up
+        v = self.facing
+        w = self.perp_axis
+
+        return True
+        
+    def generate_mesh(self):
+        # using the position and dimensions, generate a mesh of triangles that form the prisim
+
+        # each prisim needs 12 triangles, 2 per side for 6 sides
+
+        # define corners
+
+        # bottom corners
+
+        # points of tetrahedron base at middle of bottom face
+
+        if self.filename != None:
+
+            triangles = helpers.parse_obj_to_triangles(self.filename,pos=self.pos, scale = self.scale, invert_mesh=self.invert_mesh)
+
+            for triangle in triangles:
+
+                
+                triangle0 = Triangle(triangle,base_color=self.color)
+                self.mesh_triangles.append(triangle0)
+
+        
 
 def get_rot_matrix(axis, theta):
     """

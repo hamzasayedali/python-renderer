@@ -71,6 +71,47 @@ def point_rect_collide(point,rect: pygame.Rect):
 #     return np.array([camera_x, camera_y]), in_viewport
 
 
+def parse_obj_to_triangles(filename, pos=[0,0,0], scale=1,invert_mesh = False):
+
+    # load the file, loop thru and generate a list of points
+    # then generate a list of triangle descriptors
+    # then generate a list of triangles by getting the required points
+
+    f = open(f"./src/gam3r/objs/{filename}", "r")
+
+    lines = f.readlines()
+
+    vertices = []
+    triangles = []
+
+    for line in lines:
+        if line[0] == "v":
+
+            #print("Vertex")
+            data = line.split()
+            if invert_mesh:
+                vertex = [float(data[1])*scale+pos[0],float(data[2])*scale+pos[1],float(data[3])*scale+pos[2]]
+            else:
+                vertex = [float(data[1])*scale+pos[0],float(data[3])*scale+pos[1],float(data[2])*scale+pos[2]]
+
+            #print(vertex)
+            vertices.append(vertex)
+
+        if line[0] == "f":
+            data = line.split()
+
+            triangle = [vertices[int(data[1])-1],vertices[int(data[3])-1],vertices[int(data[2])-1]]
+
+            #print(triangle)
+
+            triangles.append(triangle)
+
+    return(triangles)
+
+
+
+
+parse_obj_to_triangles("icosahedron.obj")
 
 plane_normal = np.array([1,0,0])
 

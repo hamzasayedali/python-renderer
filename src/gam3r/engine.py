@@ -8,7 +8,7 @@ import random
 
 import models as models
 
-from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, Floor, Boat, ArmControlGui, Block, TextBox, Octahedron, Tetrahedron
+from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, Floor, Boat, ArmControlGui, Block, TextBox, Octahedron, Tetrahedron, Icosahedron, ObjFile
 
 from render_funcs import CameraDetails
 import constants
@@ -39,6 +39,10 @@ class Engine:
             MenuButton("Cube", (200,20),40,on_click=self.select_cube),
             MenuButton("Tetrahedron", (200,60),40,on_click=self.select_tetrahedron),
             MenuButton("Octahedron", (200,100),40,on_click=self.select_octahedron),
+            MenuButton("Icosahedron", (200,140),40,on_click=self.select_icosahedron),
+            MenuButton("Person", (200,180),40,on_click=self.select_person),
+            MenuButton("Teapot", (200,220),40,on_click=self.select_teapot),
+            MenuButton("Gourd", (200,260),40,on_click=self.select_gourd),
             
         ]
 
@@ -211,7 +215,48 @@ class Engine:
     def select_dodecahedron(self):
         print("Dodecahedron!")
     def select_icosahedron(self):
+        new_entities = []
+        for obj in self.world.entities:
+            if isinstance(obj, Floor):
+                new_entities.append(obj)
+        icosahedron = Icosahedron([0,0,5],[6,2,4],helpers.normalize(np.array([0,0,1])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)])
+        new_entities.append(icosahedron)
+        self.world.entities = new_entities
+        self.world.triangles = []
+        self.populate_world()
+        print("Tetrahedron!")
         print("Icosahedron!")
+    def select_person(self):
+        new_entities = []
+        for obj in self.world.entities:
+            if isinstance(obj, Floor):
+                new_entities.append(obj)
+        humanoid = ObjFile([0,0,5],[6,2,4],helpers.normalize(np.array([0,0,1])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)],"humanoid_tri.obj",scale=0.5,invert_mesh=True)
+        new_entities.append(humanoid)
+        self.world.entities = new_entities
+        self.world.triangles = []
+        self.populate_world()
+    def select_teapot(self):
+        new_entities = []
+        for obj in self.world.entities:
+            if isinstance(obj, Floor):
+                new_entities.append(obj)
+        humanoid = ObjFile([0,0,5],[6,2,4],helpers.normalize(np.array([0,0,1])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)],"teapot.obj",scale=0.1,invert_mesh=False)
+        new_entities.append(humanoid)
+        self.world.entities = new_entities
+        self.world.triangles = []
+        self.populate_world()
+    def select_gourd(self):
+        new_entities = []
+        for obj in self.world.entities:
+            if isinstance(obj, Floor):
+                new_entities.append(obj)
+        gourd = ObjFile([0,0,5],[6,2,4],helpers.normalize(np.array([0,0,1])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)],"gourd.obj",scale=3,invert_mesh=True)
+        new_entities.append(gourd)
+        self.world.entities = new_entities
+        self.world.triangles = []
+        self.populate_world()
+
 
 
     def populate_world(self):
@@ -836,7 +881,7 @@ class Engine:
                 break
 
             #time.sleep(0.005)
-            clock.tick(60)
+            clock.tick(600)
             self.fps = 1.0 / (time.time() - start_time)
             #pygame.display.set_caption(f"FPS: {round(fps,2)}")
 
