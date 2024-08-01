@@ -26,6 +26,12 @@ class Engine:
 
         self.num_levels = 3
 
+        # used to measure how long function calls take
+        self.profile = False
+        self.profiler_functions = []
+        self.profiler_job_count = []
+        self.profiler_times = []
+
         
 
         # store all the buttons that are on the screen currently, 
@@ -36,13 +42,15 @@ class Engine:
         ]
 
         self.level_1_buttons = [
-            MenuButton("Cube", (200,20),40,on_click=self.select_cube),
-            MenuButton("Tetrahedron", (200,60),40,on_click=self.select_tetrahedron),
-            MenuButton("Octahedron", (200,100),40,on_click=self.select_octahedron),
-            MenuButton("Icosahedron", (200,140),40,on_click=self.select_icosahedron),
-            MenuButton("Person", (200,180),40,on_click=self.select_person),
-            MenuButton("Teapot", (200,220),40,on_click=self.select_teapot),
-            MenuButton("Gourd", (200,260),40,on_click=self.select_gourd),
+            MenuButton("Cube", (20,20),40,on_click=self.select_cube,align="left"),
+            MenuButton("Tetrahedron", (20,60),40,on_click=self.select_tetrahedron,align="left"),
+            MenuButton("Octahedron", (20,100),40,on_click=self.select_octahedron,align="left"),
+            MenuButton("Icosahedron", (20,140),40,on_click=self.select_icosahedron,align="left"),
+            MenuButton("Person", (20,180),40,on_click=self.select_person,align="left"),
+            MenuButton("Teapot", (20,220),40,on_click=self.select_teapot,align="left"),
+            MenuButton("Gourd", (20,260),40,on_click=self.select_gourd,align="left"),
+            MenuButton("Cow", (20,300),40,on_click=self.select_cow,align="left"),
+            MenuButton("Dodecahedron", (20,340),40,on_click=self.select_dodecahedron,align="left"),
             
         ]
 
@@ -253,6 +261,26 @@ class Engine:
                 new_entities.append(obj)
         gourd = ObjFile([0,0,5],[6,2,4],helpers.normalize(np.array([0,0,1])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)],"gourd.obj",scale=3,invert_mesh=True)
         new_entities.append(gourd)
+        self.world.entities = new_entities
+        self.world.triangles = []
+        self.populate_world()
+    def select_cow(self):
+        new_entities = []
+        for obj in self.world.entities:
+            if isinstance(obj, Floor):
+                new_entities.append(obj)
+        cow = ObjFile([0,0,5],[6,2,4],helpers.normalize(np.array([0,0,1])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)],"cow.obj",scale=3,invert_mesh=True)
+        new_entities.append(cow)
+        self.world.entities = new_entities
+        self.world.triangles = []
+        self.populate_world()
+    def select_dodecahedron(self):
+        new_entities = []
+        for obj in self.world.entities:
+            if isinstance(obj, Floor):
+                new_entities.append(obj)
+        dodecahedron = ObjFile([0,0,5],[6,2,4],helpers.normalize(np.array([0,0,1])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)],"dodecahedron.obj",scale=3,invert_mesh=True)
+        new_entities.append(dodecahedron)
         self.world.entities = new_entities
         self.world.triangles = []
         self.populate_world()
@@ -526,6 +554,10 @@ class Engine:
         elif event.key == pygame.K_F3:
             if keypress:
                 self.display_developer_info = not self.display_developer_info
+        
+        elif event.key == pygame.K_p:
+            if keypress:
+                self.profile = not self.profile
 
 
     def update(self):
@@ -720,6 +752,8 @@ class Engine:
 
     def render(self):
 
+        
+
         if self.current_view == "MENU":
             self.menu_background.render(self.screen)
 
@@ -746,24 +780,52 @@ class Engine:
 
             self.screen.blit(self.game_background,(0,0))
 
-            
+            p_clock = time.time()
+
             clipped_triangles = self.clip_scene()
+
+            if self.profile:
+                self.profiler_functions.append("clipped_triangles")
+                self.profiler_job_count.append(len(self.world.triangles))
+                new_clock = time.time()
+                self.profiler_times.append(new_clock - p_clock)
+
+            
+            p_clock = time.time()
 
             facing_triangles = self.remove_not_facing_triangles(clipped_triangles)
             
+            if self.profile:
+                self.profiler_functions.append("facing_triangles")
+                self.profiler_job_count.append(len(clipped_triangles))
+                new_clock = time.time()
+                self.profiler_times.append(new_clock - p_clock)
+
+            
+            p_clock = time.time()
 
             for triangle in facing_triangles:
                 triangle.update_dist_to_camera(self.camera.pos)
                 
+            if self.profile:
+                self.profiler_functions.append("update_dist_to_camera")
+                self.profiler_job_count.append(len(facing_triangles))
+                new_clock = time.time()
+                self.profiler_times.append(new_clock - p_clock)
 
+
+            p_clock = time.time()
             # sort triangles by distance to camera
             depth_buffer_triangles = sorted(facing_triangles, key=lambda x: x.dist_to_camera, reverse=True)
+            
+            if self.profile:
+                self.profiler_functions.append("depth_buffer_triangles")
+                self.profiler_job_count.append(len(facing_triangles))
+                new_clock = time.time()
+                self.profiler_times.append(new_clock - p_clock)
 
+            p_clock = time.time()
             for triangle in depth_buffer_triangles:
-
-                #print(np.dot(triangle.get_normal(),self.camera.facing))
-                #print(np.dot(triangle.get_normal(),triangle.get_center()-self.camera.pos))
-
 
                 # check if i am looking at the triangle (if it is in our field of view)
                 # do this by getting the line from the camera to each of the points
@@ -772,13 +834,9 @@ class Engine:
 
                 new_points = []
 
-
                 # check if the triangle is facing me, e.g. the normal of the triangle
                 # dotted with the normal of the camera to the triangle
                 # is positive
-
-                
-
 
                 for point in triangle.points:
 
@@ -787,7 +845,14 @@ class Engine:
                     if np.dot(self.camera.facing, camera_to_point) > 0:
                         in_camera = True
 
+                    q_clock = time.time()
                     new_point, point_in_camera = self.convert_3d_to_2d_coords(camera_details, point)
+
+                    if self.profile:
+                        self.profiler_functions.append("convert_3d_to_2d_coords")
+                        self.profiler_job_count.append(1)
+                        new_clock = time.time()
+                        self.profiler_times.append(new_clock - q_clock)
 
                     new_point = self.cam_coords_to_pygame(new_point)
 
@@ -797,17 +862,33 @@ class Engine:
                     new_points.append(new_point)
 
                 # get color of triangle
-                lighted_color = triangle.get_lighted_color(self.world.sun_direction,self.camera.pos)
+                q_clock = time.time()
+
+                if not triangle.lighting_is_calculated:
+                    triangle.get_lighted_color(self.world.sun_direction,self.camera.pos)
+                    
+                lighted_color = triangle.adjusted_color
+                if self.profile:
+                    self.profiler_functions.append("get_lighted_color")
+                    self.profiler_job_count.append(1)
+                    new_clock = time.time()
+                    self.profiler_times.append(new_clock - q_clock)
 
                 if in_camera:
-                
+                    q_clock = time.time()
                     pygame.draw.polygon(self.screen,lighted_color,new_points)
+                    if self.profile:
+                        self.profiler_functions.append("pygame.draw.polygon")
+                        self.profiler_job_count.append(1)
+                        new_clock = time.time()
+                        self.profiler_times.append(new_clock - q_clock)
 
-            
+            if self.profile:
+                self.profiler_functions.append("draw_loop")
+                self.profiler_job_count.append(len(depth_buffer_triangles))
+                new_clock = time.time()
+                self.profiler_times.append(new_clock - p_clock)
 
-            
-
-                #pygame.draw.circle(self.screen,(0,255,0),(new_center[0],new_center[1]),1)
 
 
             pygame.draw.rect(self.screen,(0,0,0),pygame.Rect(constants.WIDTH/2-1,constants.HEIGHT/2-10,2,20))
@@ -857,7 +938,14 @@ class Engine:
                 #input handling
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
+                        print(self.profiler_functions)
+                        print(self.profiler_job_count)
+                        print(self.profiler_times)
+
+                        helpers.profiling(self.profiler_functions,self.profiler_job_count,self.profiler_times)
                         pygame.quit()
+
+                        
                         break
                     
                     # Check for key presses

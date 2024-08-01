@@ -1,0 +1,107 @@
+['clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83', 'clipped_triangles: 261', 'facing_triangles: 165', 'update_dist_to_camera: 83']
+[0.009186983108520508, 0.022095203399658203, 0.0010356903076171875, 0.009068965911865234, 0.021724700927734375, 0.0010230541229248047, 0.009093761444091797, 0.022369861602783203, 0.0010366439819335938, 0.008967876434326172, 0.02154088020324707, 0.0010149478912353516, 0.009060144424438477, 0.021860122680664062, 0.0010223388671875, 0.00896906852722168, 0.022556066513061523, 0.0010039806365966797, 0.00925898551940918, 0.02201390266418457, 0.0010309219360351562, 0.009411811828613281, 0.02188587188720703, 0.0009920597076416016, 0.009237051010131836, 0.02275395393371582, 0.0011038780212402344, 0.009109020233154297, 0.022276639938354492, 0.0010077953338623047, 0.009563922882080078, 0.022130966186523438, 0.0010371208190917969, 0.009370088577270508, 0.02240896224975586, 0.0010929107666015625, 0.009289979934692383, 0.021833181381225586, 0.0010027885437011719, 0.009167909622192383, 0.021906137466430664, 0.0010259151458740234, 0.009293794631958008, 0.02239203453063965, 0.0010371208190917969, 0.009032964706420898, 0.021886110305786133, 0.0010800361633300781, 0.00898289680480957, 0.02185797691345215, 0.0010209083557128906, 0.009124040603637695, 0.021764755249023438, 0.0009930133819580078, 0.009197235107421875, 0.021851062774658203, 0.001013040542602539, 0.009009122848510742, 0.02165389060974121, 0.0010161399841308594, 0.009070158004760742, 0.02173781394958496, 0.001007080078125, 0.009406805038452148, 0.022304058074951172, 0.0010101795196533203, 0.009441137313842773, 0.021889925003051758, 0.0010139942169189453]
+
+
+
+{'clipped_triangles': 14080, 'facing_triangles': 14080, 'update_dist_to_camera': 6904, 'depth_buffer_triangles': 6904, 'convert_3d_to_2d_coords': 6904}
+{'clipped_triangles': 0.3939473628997803, 'facing_triangles': 1.3360998630523682, 'update_dist_to_camera': 0.057492971420288086, 'depth_buffer_triangles': 0.003139019012451172, 'convert_3d_to_2d_coords': 1.615278959274292}
+
+
+
+
+
+0.393
+
+
+clipped_triangles did 15660 in 0.46042323112487793 seconds. 0 ms per job
+facing_triangles did 10192 in 0.9892244338989258 seconds. 0 ms per job
+update_dist_to_camera did 5126 in 0.04285740852355957 seconds. 0 ms per job
+depth_buffer_triangles did 5126 in 0.0022623538970947266 seconds. 0 ms per job
+convert_3d_to_2d_coords did 5126 in 1.47383713722229 seconds. 0 ms per job
+
+
+
+clipped_triangles did 38889 in 1.157332181930542 seconds. 0.03 ms per job
+facing_triangles did 33761 in 3.3126368522644043 seconds. 0.1 ms per job
+update_dist_to_camera did 16874 in 0.14036250114440918 seconds. 0.01 ms per job
+depth_buffer_triangles did 16874 in 0.007388591766357422 seconds. 0.0 ms per job
+convert_3d_to_2d_coords did 16874 in 4.609597206115723 seconds. 0.27 ms per job
+
+clipped_triangles did 23852 in 0.7042374610900879 seconds. 0.0295 ms per job
+facing_triangles did 23852 in 2.3865108489990234 seconds. 0.1001 ms per job
+update_dist_to_camera did 11924 in 0.10436701774597168 seconds. 0.0088 ms per job
+depth_buffer_triangles did 11924 in 0.005285739898681641 seconds. 0.0004 ms per job
+convert_3d_to_2d_coords did 11924 in 2.9540579319000244 seconds. 0.2477 ms per job
+
+clipped_triangles did 31356 in 0.921522855758667 seconds. 0.0294 ms per job
+facing_triangles did 31356 in 3.046513557434082 seconds. 0.0972 ms per job
+update_dist_to_camera did 15674 in 0.13590025901794434 seconds. 0.0087 ms per job
+depth_buffer_triangles did 15674 in 0.00698399543762207 seconds. 0.0004 ms per job
+convert_3d_to_2d_coords did 47022 in 0.8037924766540527 seconds. 0.0171 ms per job
+draw_loop did 15674 in 3.8753738403320312 seconds. 0.2472 ms per job
+
+
+clipped_triangles did 17420 in 0.5115978717803955 seconds. 0.0294 ms per job
+facing_triangles did 17420 in 1.6692516803741455 seconds. 0.0958 ms per job
+update_dist_to_camera did 8708 in 0.07113528251647949 seconds. 0.0082 ms per job
+depth_buffer_triangles did 8708 in 0.0039691925048828125 seconds. 0.0005 ms per job
+convert_3d_to_2d_coords did 26124 in 0.4429037570953369 seconds. 0.017 ms per job
+pygame.draw.polygon did 8708 in 0.08177709579467773 seconds. 0.0094 ms per job
+draw_loop did 8708 in 2.1520259380340576 seconds. 0.2471 ms per job
+
+
+
+As shown by the profiling below, lighting the triangles is one of the most computation intensive
+Parts of the render loop. Since i am using a fixed light source, i can actually just do this once and 
+Update it only as needed.
+
+clipped_triangles did 19832 in 0.574512243270874 seconds. 0.029 ms per job
+facing_triangles did 19832 in 1.9165303707122803 seconds. 0.0966 ms per job
+update_dist_to_camera did 9914 in 0.08248758316040039 seconds. 0.0083 ms per job
+depth_buffer_triangles did 9914 in 0.004376888275146484 seconds. 0.0004 ms per job
+convert_3d_to_2d_coords did 29742 in 0.5070827007293701 seconds. 0.017 ms per job
+get_lighted_color did 9914 in 1.398414134979248 seconds. 0.1411 ms per job
+pygame.draw.polygon did 9914 in 0.08631658554077148 seconds. 0.0087 ms per job
+draw_loop did 9914 in 2.4614689350128174 seconds. 0.2483 ms per job
+
+Now, i only calculate the color once when the triangles are newly loaded
+And it sped up the get_lighted_color section from 0.1411ms to 0.0008ms!! yay!!
+It also sped up the draw loop from 0.2483ms to 0.1005ms!!! Very nice!!!
+
+clipped_triangles did 24120 in 0.6943402290344238 seconds. 0.0288 ms per job
+facing_triangles did 24120 in 2.3050146102905273 seconds. 0.0956 ms per job
+update_dist_to_camera did 12056 in 0.0995488166809082 seconds. 0.0083 ms per job
+depth_buffer_triangles did 12056 in 0.0053501129150390625 seconds. 0.0004 ms per job
+convert_3d_to_2d_coords did 36168 in 0.5875740051269531 seconds. 0.0162 ms per job
+get_lighted_color did 12056 in 0.009369134902954102 seconds. 0.0008 ms per job
+pygame.draw.polygon did 12056 in 0.08281588554382324 seconds. 0.0069 ms per job
+draw_loop did 12056 in 1.211329460144043 seconds. 0.1005 ms per job
+
+I am currently recalculating the triangles normals and centers every time, but i can also
+Just do that when the triangle is updated and store the value. I changed this in the code now 
+This is the profiling result:
+
+clipped_triangles did 45024 in 1.3342814445495605 seconds. 0.0296 ms per job
+facing_triangles did 45024 in 0.655754804611206 seconds. 0.0146 ms per job
+update_dist_to_camera did 22506 in 0.1957080364227295 seconds. 0.0087 ms per job
+depth_buffer_triangles did 22506 in 0.010428667068481445 seconds. 0.0005 ms per job
+convert_3d_to_2d_coords did 67518 in 1.1187853813171387 seconds. 0.0166 ms per job
+get_lighted_color did 22506 in 0.017529010772705078 seconds. 0.0008 ms per job
+pygame.draw.polygon did 22506 in 0.1582198143005371 seconds. 0.007 ms per job
+draw_loop did 22506 in 2.2964255809783936 seconds. 0.102 ms per job
+
+facing_triangles dropped from 0.0956ms to 0.0146ms per triangle, thats a solid performance boost!
+
+All of those prior tests were with the cube, i did one with the cow to see what it looked like comparatively
+
+clipped_triangles did 60600 in 1.6826598644256592 seconds. 0.0278 ms per job
+facing_triangles did 60600 in 0.8415312767028809 seconds. 0.0139 ms per job
+update_dist_to_camera did 29883 in 0.25206804275512695 seconds. 0.0084 ms per job
+depth_buffer_triangles did 29883 in 0.015970706939697266 seconds. 0.0005 ms per job
+convert_3d_to_2d_coords did 89649 in 1.4246630668640137 seconds. 0.0159 ms per job
+get_lighted_color did 29883 in 0.048783302307128906 seconds. 0.0016 ms per job
+pygame.draw.polygon did 29883 in 0.13529276847839355 seconds. 0.0045 ms per job
+draw_loop did 29883 in 2.8751220703125 seconds. 0.0962 ms per job
+
+
+

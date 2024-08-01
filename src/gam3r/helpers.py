@@ -109,6 +109,33 @@ def parse_obj_to_triangles(filename, pos=[0,0,0], scale=1,invert_mesh = False):
     return(triangles)
 
 
+def profiling(funcs, job_counts, times):
+    funcs_jobs_dict = {}
+    funcs_times_dict = {}
+
+    for i in range(len(funcs)):
+        func = funcs[i]
+        job_count = job_counts[i]
+        job_time = times[i]
+
+        if func in funcs_jobs_dict:
+            funcs_jobs_dict.update({func: funcs_jobs_dict[func] + job_count})
+        else:
+            funcs_jobs_dict.update({func: job_count})
+
+        if func in funcs_times_dict:
+            funcs_times_dict.update({func: funcs_times_dict[func] + job_time})
+        else:
+            funcs_times_dict.update({func: job_time})
+
+    print(funcs_jobs_dict)
+    print(funcs_times_dict)
+
+    for x in funcs_jobs_dict:
+        num_jobs = funcs_jobs_dict[x]
+        time_taken = funcs_times_dict[x]
+        print(f"{x} did {funcs_jobs_dict[x]} in {funcs_times_dict[x]} seconds. {round(time_taken*1000/num_jobs,4)} ms per job")
+
 
 
 parse_obj_to_triangles("icosahedron.obj")

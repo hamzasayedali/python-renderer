@@ -231,17 +231,30 @@ class Triangle:
         self.dist_to_camera = 0
         self.middle = (np.array(self.points[0]) + np.array(self.points[1]) + np.array(self.points[2]))/3.0
 
-
+        self.lighting_is_calculated = False
+        self.adjusted_color = self.color
         self.base_color = base_color
+
+        self.normal_is_calculated = False
+        self.normal = [0,0,0]
+
+        self.center_is_calculated = False
+        
     
     def update_dist_to_camera(self,camera_coord):
         self.dist_to_camera = np.linalg.norm(self.middle - camera_coord)
 
     def get_center(self):
+        if self.center_is_calculated:
+            return self.middle
+        
         self.middle = (np.array(self.points[0]) + np.array(self.points[1]) + np.array(self.points[2]))/3.0
+        #self.center_is_calculated = True
         return self.middle
     
     def get_normal(self):
+        if self.normal_is_calculated:
+            return self.normal
         #compute the projection of the normal of the triangle to the direction of the sun. Parallel means full color, perpendicular means duller color
         v1 = np.array(self.points[1]) - np.array(self.points[0])
         v2 = np.array(self.points[2]) - np.array(self.points[0])
@@ -249,6 +262,9 @@ class Triangle:
         # Compute the cross product of the two edge vectors
         normal_vector = np.cross(v1, v2)
         normalized_normal = normal_vector / np.linalg.norm(normal_vector)
+
+        self.normal_is_calculated = True
+        self.normal = normalized_normal
         return normalized_normal
     
     def get_lighted_color(self, sun_position, camera_position):
@@ -282,6 +298,8 @@ class Triangle:
         
 
         adjusted_color = np.array(self.base_color) * light_level
+        self.adjusted_color = adjusted_color
+        self.lighting_is_calculated = True
         return (adjusted_color[0],adjusted_color[1],adjusted_color[2])
     
         #return self.color
@@ -1133,7 +1151,7 @@ def default_onclick():
     print("Default onclick")
 class MenuButton:
 
-    def __init__(self, text = "sample text", pos = (200,100), height=40, on_click = default_onclick) -> None:
+    def __init__(self, text = "sample text", pos = (200,100), height=40, on_click = default_onclick, align = "center") -> None:
         
         self.text = text
         self.padding = 10
@@ -1143,6 +1161,8 @@ class MenuButton:
 
         self.color = (100,100,100)
         self.text_color = (255,255,255)
+
+        self.align = align
 
         self.hovered = False
 
@@ -1155,7 +1175,10 @@ class MenuButton:
     def render(self, screen,my_font):
         
         text_surface = my_font.render(f' {self.text} ', False, self.text_color)
-        text_rect = text_surface.get_rect(center=(self.pos[0],self.pos[1]))
+        if self.align == "center":
+            text_rect = text_surface.get_rect(center=(self.pos[0],self.pos[1]))
+        if self.align == "left":
+            text_rect = text_surface.get_rect(midleft=(self.pos[0],self.pos[1]))
         self.rect = text_rect
         pygame.draw.rect(screen,self.color,text_rect)
         screen.blit(text_surface,text_rect)
