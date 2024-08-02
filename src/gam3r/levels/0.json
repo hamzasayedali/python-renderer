@@ -3,7 +3,7 @@
     "camera_position": [7.0,0.0,1.0],
     "camera_direction": 180,
     "camera_tilt": 0,
-    "camera_FOV": 90,
+    "camera_FOV": 60,
 
     "floor": {
         "origin" : [-16,-16,-20],

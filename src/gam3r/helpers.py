@@ -92,7 +92,7 @@ def parse_obj_to_triangles(filename, pos=[0,0,0], scale=1,invert_mesh = False):
             if invert_mesh:
                 vertex = [float(data[1])*scale+pos[0],float(data[2])*scale+pos[1],float(data[3])*scale+pos[2]]
             else:
-                vertex = [float(data[1])*scale+pos[0],float(data[3])*scale+pos[1],float(data[2])*scale+pos[2]]
+                vertex = [float(data[1])*scale+pos[0],float(data[3])*scale+pos[2],float(data[2])*scale+pos[1]]
 
             #print(vertex)
             vertices.append(vertex)

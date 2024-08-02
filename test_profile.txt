@@ -105,3 +105,26 @@ draw_loop did 29883 in 2.8751220703125 seconds. 0.0962 ms per job
 
 
 
+I went back to the previous commit to check how the frame rate improved from the 
+changes i made and it was quite substantial! I just checked the gourd model and it was
+as follows:
+
+Before improvements:
+~6.8fps
+After improvements
+~17.0fps
+
+
+Where else can i make more improvemt though? I do kind of want the cow to 
+render at + 10fps 
+
+clipped_triangles did 66660 in 1.3264706134796143 seconds. 0.0199 ms per job
+facing_triangles did 66660 in 0.6564540863037109 seconds. 0.0098 ms per job
+update_dist_to_camera did 29244 in 0.17900991439819336 seconds. 0.0061 ms per job
+depth_buffer_triangles did 29244 in 0.01232457160949707 seconds. 0.0004 ms per job
+convert_3d_to_2d_coords did 87732 in 0.9895651340484619 seconds. 0.0113 ms per job
+get_lighted_color did 29244 in 0.044885873794555664 seconds. 0.0015 ms per job
+pygame.draw.polygon did 29244 in 0.09730935096740723 seconds. 0.0033 ms per job
+draw_loop did 29244 in 2.0353896617889404 seconds. 0.0696 ms per job
+
+

@@ -8,7 +8,7 @@ import random
 
 import models as models
 
-from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, Floor, Boat, ArmControlGui, Block, TextBox, Octahedron, Tetrahedron, Icosahedron, ObjFile
+from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, Floor, Boat, ArmControlGui, Block, TextBox, Octahedron, Tetrahedron, Icosahedron, ObjFile, Player, Coin
 
 from render_funcs import CameraDetails
 import constants
@@ -24,7 +24,7 @@ class Engine:
         self.current_level = 0
         self.current_level_name = "Sample Level"
 
-        self.num_levels = 3
+        self.num_levels = 4
 
         # used to measure how long function calls take
         self.profile = False
@@ -62,6 +62,8 @@ class Engine:
         self.robot = Robot()
         self.block = Block()
         self.current_robot_joint = 0
+        self.camera_to_player = np.array([15,0,-14])
+        self.player = Player(self.camera.pos + self.camera_to_player)
 
         self.display_developer_info = False
 
@@ -113,7 +115,7 @@ class Engine:
 
         
 
-        self.camera = Camera(pos=camera_position, direction=camera_direction,pitch=camera_tilt)
+        self.camera = Camera(pos=camera_position, direction=camera_direction,pitch=camera_tilt,fov=camera_FOV)
 
         floor = Floor(y["floor"]["origin"],y["floor"]["tile_count"],y["floor"]["color"])
 
@@ -161,6 +163,28 @@ class Engine:
 
             self.world.entities.append(self.robot)
 
+        if level == 3:
+            self.world.score = 0
+            self.world.sun_direction = np.array([-200,100,50])
+            self.camera.velocity = np.array([0.3,0,0])
+
+            shuttle = ObjFile([0,0,0],[1,1,1],up=[0,0,1], facing=[1,0,0], color=[250,100,100],filename="hallway.obj",scale=1,invert_mesh=True)
+            self.world.entities.append(shuttle)
+            self.player = Player(self.camera.pos + self.camera_to_player)
+            self.world.entities.append(self.player)
+
+            
+
+            for i in range(200):
+                shuttle = ObjFile([5+5*i,0,0],[1,1,1],up=[0,0,1], facing=[1,0,0], color=[random.randint(20,230),random.randint(20,230),random.randint(20,230)],filename="hallway.obj",scale=1,invert_mesh=True)
+                self.world.entities.append(shuttle)
+
+            for i in range(30):
+                self.world.coins.append(Coin([33+i*10,random.randint(-9,-1),3]))
+
+            
+
+
         
 
     def level_increment(self):
@@ -192,8 +216,14 @@ class Engine:
         for obj in self.world.entities:
             if isinstance(obj, Floor):
                 new_entities.append(obj)
-        cube = Prisim([0,0,5],[2,2,2],[0,0,1],[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)])
-        new_entities.append(cube)
+
+
+
+        for i in range(10):
+
+            cube = Prisim([random.randint(-20,20),random.randint(-20,20),random.randint(1,20)],[2,2,2],[0,0,1],[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)])
+            new_entities.append(cube)
+
         self.world.entities = new_entities
         self.world.triangles = []
         self.populate_world()
@@ -203,8 +233,10 @@ class Engine:
         for obj in self.world.entities:
             if isinstance(obj, Floor):
                 new_entities.append(obj)
-        octahedron = Octahedron([0,0,10],[2,2,4],helpers.normalize(np.array([0,0.5,1])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)])
-        new_entities.append(octahedron)
+
+        for i in range(10):
+            octahedron = Octahedron([random.randint(-20,20),random.randint(-20,20),random.randint(4,24)],[2,2,4],helpers.normalize(np.array([0,random.randint(-10,10)/10.0,random.randint(-10,10)/10.0])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)])
+            new_entities.append(octahedron)
         self.world.entities = new_entities
         self.world.triangles = []
         self.populate_world()
@@ -558,6 +590,9 @@ class Engine:
         elif event.key == pygame.K_p:
             if keypress:
                 self.profile = not self.profile
+        elif event.key == pygame.K_g:
+            if keypress:
+                self.camera.toggle_path_follow()
 
 
     def update(self):
@@ -618,7 +653,25 @@ class Engine:
                 #for i in range(len(self.robot.L)):
                 #    arm_control_gui = ArmControlGui(index=i)
 
-        
+        if self.current_level == 3:
+            self.player = Player(self.camera.pos+self.camera_to_player)
+            new_entities = []
+            for obj in self.world.entities:
+                if not isinstance(obj,Player):
+                    new_entities.append(obj)
+            new_entities.append(self.player)
+
+            self.world.entities = new_entities
+
+            
+            self.world.triangles = []
+            self.populate_world()
+
+            if self.camera.pos[1] < -9.5:
+                self.camera.pos[1] = -9.5
+
+            if self.camera.pos[1] > -0.5:
+                self.camera.pos[1] = -0.5
 
 
         self.world.update()
@@ -655,7 +708,8 @@ class Engine:
 
         P_rel_camera_depth = np.dot(P_rel_camera, camera_details.camera_normal)
 
-
+        if P_rel_camera_depth == 0:
+            P_rel_camera_depth = 0.01
         P_prime_height = P_rel_camera_height * camera_details.view_dist / P_rel_camera_depth
         P_prime_lateral = P_rel_camera_lateral * camera_details.view_dist / P_rel_camera_depth
 
@@ -712,11 +766,11 @@ class Engine:
 
         # planes
 
-        camera_facing = helpers.normalize(self.camera.facing)
+        camera_facing = self.camera.facing
 
         #print(self.camera.pos + 3 * camera_facing)
 
-        near_plane = (camera_facing,helpers.signed_dist_to_plane(np.array([0,0,0]),camera_facing,(self.camera.pos + 3 * camera_facing)))
+        near_plane = (camera_facing,helpers.signed_dist_to_plane(np.array([0,0,0]),camera_facing,(self.camera.pos + 6 * camera_facing)))
         far_plane = (-camera_facing,helpers.signed_dist_to_plane(np.array([0,0,0]),-camera_facing,(self.camera.pos + 90 * camera_facing)))
 
         #print(near_plane[1])
@@ -864,10 +918,10 @@ class Engine:
                 # get color of triangle
                 q_clock = time.time()
 
-                if not triangle.lighting_is_calculated:
-                    triangle.get_lighted_color(self.world.sun_direction,self.camera.pos)
+                
+                lighted_color = triangle.get_lighted_color(self.world.sun_direction,self.camera.pos)
                     
-                lighted_color = triangle.adjusted_color
+                
                 if self.profile:
                     self.profiler_functions.append("get_lighted_color")
                     self.profiler_job_count.append(1)
@@ -911,6 +965,10 @@ class Engine:
             if self.current_level == 1:
                 for button in self.level_1_buttons:
                     button.render(self.screen,self.my_font)
+
+            if self.current_level == 3:
+                TextBox(text=f"Score: {self.world.score}", pos=(100,40)).render(self.screen,self.my_font)
+
 
 
             TextBox(text=f"Level {self.current_level+1}: {self.current_level_name}", pos=(constants.WIDTH/2.0,constants.HEIGHT-40)).render(self.screen,self.my_font)

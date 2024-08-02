@@ -14,7 +14,7 @@ class Camera:
         # rotation about z axis in degrees
         self.direction = direction
         # vec3 for direction the view is facing, normalized direction vector
-        self.facing = np.array([round(math.cos(math.radians(direction)),5),round(math.sin(math.radians(direction)),5),0])
+        self.facing = helpers.normalize(np.array([round(math.cos(math.radians(direction)),5),round(math.sin(math.radians(direction)),5),0]))
 
         # float for Field of View in radians
         self.fov = fov
@@ -26,6 +26,12 @@ class Camera:
         self.pitch = 0
 
         self.set_pitch(pitch)
+
+        self.velocity = np.array([0,0,0])
+
+        self.path = [[-12.5,-5.5,9.0],[40.5,-5.5,9.0],[-12.5,-5.5,9.0],[40.5,-5.5,9.0]]
+        self.current_path_point = -1
+        self.is_following_path = False
 
         print(f"FACING: {self.facing[0]} {self.facing[1]}")
 
@@ -79,7 +85,7 @@ class Camera:
                      [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
 
 
-        self.facing = np.dot(rot_matrix,self.facing)
+        self.facing = helpers.normalize(np.dot(rot_matrix,self.facing))
         self.up = np.dot(rot_matrix,self.up)
 
         #self.facing = np.array([round(math.cos(math.radians(self.direction)),5),round(math.sin(math.radians(self.direction)),5),self.facing[2]])
@@ -121,7 +127,7 @@ class Camera:
                      [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
 
 
-        self.facing = np.dot(rot_matrix,self.facing)
+        self.facing = helpers.normalize(np.dot(rot_matrix,self.facing))
 
         self.up = np.dot(rot_matrix,self.up)
 
@@ -129,7 +135,15 @@ class Camera:
         self.is_orbiting = not self.is_orbiting
 
         if self.is_orbiting:
+            
             self.orbit_distance = np.linalg.norm(self.pos - np.array([0,0,0]))
+
+    def toggle_path_follow(self):
+        self.is_following_path = not self.is_following_path 
+        
+        if self.is_following_path:
+            self.current_path_point = 0
+            self.pos = np.array(self.path[0])
 
     def turn(self, direction):
         if direction == "LEFT":
@@ -153,6 +167,8 @@ class Camera:
         if self.is_orbiting:
             self.orbit([0,0,0], orbit_facing)
 
+        if self.is_following_path:
+            self.follow_path()
 
         # call functions based on current input status
 
@@ -187,6 +203,8 @@ class Camera:
         if inputs["RIGHTBRACKET"]:
             self.tilt("DOWN")
             pass
+
+        self.pos += self.velocity
         
 
     def orbit(self, orbit_point, orbit_facing = [0,0,0]):
@@ -222,6 +240,22 @@ class Camera:
 
         self.set_direction(angle)
 
+    def follow_path(self):
+        next_path_point = self.current_path_point + 1
+
+        if next_path_point == len(self.path):
+            next_path_point = 0
+
+       
+        direction = helpers.normalize(np.array(self.path[next_path_point]) - self.pos)
+        self.pos += direction * constants.CAMERA_MOVE_SPEED
+
+        if np.linalg.norm(self.pos - np.array(self.path[next_path_point])) < 2:
+            
+            self.pos = np.array(self.path[next_path_point])
+            self.current_path_point = next_path_point
+        
+
 
 class Triangle:
     def __init__(self, points=[], base_color = [200, 45,85]):
@@ -232,6 +266,7 @@ class Triangle:
         self.middle = (np.array(self.points[0]) + np.array(self.points[1]) + np.array(self.points[2]))/3.0
 
         self.lighting_is_calculated = False
+        self.prev_sun_position = np.array([0,0,0])
         self.adjusted_color = self.color
         self.base_color = base_color
 
@@ -269,6 +304,9 @@ class Triangle:
     
     def get_lighted_color(self, sun_position, camera_position):
 
+        if (sun_position == self.prev_sun_position).all():
+            return self.adjusted_color
+
         #figure out if I'm between the triangle and the sun
 
         sun_direction = self.get_center() - sun_position
@@ -299,7 +337,7 @@ class Triangle:
 
         adjusted_color = np.array(self.base_color) * light_level
         self.adjusted_color = adjusted_color
-        self.lighting_is_calculated = True
+        self.prev_sun_position = sun_position
         return (adjusted_color[0],adjusted_color[1],adjusted_color[2])
     
         #return self.color
@@ -318,7 +356,17 @@ class World:
         self.is_sunrising = False
         self.sun_velocity = 10
 
+        self.coins = [Coin([30,-5.5,3])]
+
         self.load_entities()
+
+        self.score = 0
+
+        
+
+        self.player_pos = np.array([0,0,0])
+
+        
 
     def add_triangle(self, triangle):
         self.triangles.append(triangle)
@@ -336,9 +384,30 @@ class World:
             if abs(self.sun_direction[2]) > 100:
                 self.sun_velocity *= -1
 
+        self.update_coins()
+
+        
+
+    
+    def update_coins(self):
+        for coin in self.coins:
+            if np.linalg.norm(coin.pos-self.player_pos) < 3:
+                if not coin.claimed:
+                    coin.claimed = True
+                    self.score += 1
+                    print("COIN!!")
+
+    
+
     def load_entities(self):
 
         self.triangles = []
+
+        for coin in self.coins:
+            if not coin.claimed:
+                for triangle in coin.model.mesh_triangles:
+                    self.add_triangle(triangle)
+        
         for obj in self.entities:
             if isinstance(obj, Floor):
                 
@@ -368,6 +437,11 @@ class World:
 
             if isinstance(obj, Robot):
                 for triangle in obj.mesh_triangles:
+                    self.add_triangle(triangle)
+
+            if isinstance(obj,Player):
+                self.player_pos = obj.pos
+                for triangle in obj.model.mesh_triangles:
                     self.add_triangle(triangle)
 
         print(len(self.triangles))
@@ -1354,7 +1428,20 @@ class ArmControlGui:
         pass
             
 
+class Player:
+    def __init__(self,pos):
+        self.pos = pos
+        self.model = ObjFile(self.pos,[6,2,4],helpers.normalize(np.array([0,0,1])),[1,0,0],[200,200,200],"humanoid_tri.obj",scale=0.3,invert_mesh=True)
+    
+    def update_pos(self, pos):
+        self.pos = pos
+        self.model = ObjFile(self.pos,[6,2,4],helpers.normalize(np.array([0,0,1])),[1,0,0],[random.randint(20,230),random.randint(20,230),random.randint(20,230)],"humanoid_tri.obj",scale=0.5,invert_mesh=True)
 
+class Coin:
+    def __init__(self,pos):
+        self.pos = pos
+        self.model = Octahedron(pos, [2,1,1],[0,0,1],[1,0,0],[255,200,0])
+        self.claimed = False
         
 
             
