@@ -357,6 +357,7 @@ class World:
         self.sun_velocity = 10
 
         self.coins = [Coin([30,-5.5,3])]
+        self.bullets = []
 
         self.load_entities()
 
@@ -1443,7 +1444,24 @@ class Coin:
         self.model = Octahedron(pos, [2,1,1],[0,0,1],[1,0,0],[255,200,0])
         self.claimed = False
         
+class Bullet:
+    def __init__(self,pos):
+        self.pos = pos
+        self.velocity = np.array([1,0,0])
 
-            
+        self.mesh_triangles = []
+        self.generate_mesh()
+
+    def update(self):
+        self.pos += self.velocity
+        self.generate_mesh()
+
+    def generate_mesh(self):
+        self.mesh_triangles = []
+        p1 = np.array([0,-0.2,0]) + self.pos
+        p2 = np.array([0,0.2,0]) + self.pos
+        p3 = np.array([0.5,0,0]) + self.pos
+
+        triangle = Triangle([p1,p2,p3],[150,150,150])
 
 
