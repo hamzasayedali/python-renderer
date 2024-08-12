@@ -6,8 +6,6 @@ import helpers
 import json
 import random
 
-import models as models
-
 from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, Floor, Boat, ArmControlGui, Block, TextBox, Octahedron, Tetrahedron, Icosahedron, ObjFile, Player, Coin
 
 from render_funcs import CameraDetails
@@ -323,80 +321,6 @@ class Engine:
 
         print(len(self.world.triangles))
 
-    def populate_world_2(self):
-
-        
-        
-        # test objects to add to the world
-        # triangle located at the origin in then y-z plane
-        
-        octahedron = models.octahedron()
-
-        cube = models.cube()
-
-        for triangle in self.block.prisim.mesh_triangles:
-            self.world.add_triangle(triangle)
-        
-        #for triangle in octahedron:
-        #    self.world.add_triangle(triangle)
-
-        for triangle in cube:
-            self.world.add_triangle(Triangle(triangle))
-
-
-        prisim = Prisim([-6,3,0],[1,1,4])
-        prisim2 = Prisim([-6,3,-4],[4,1,1])
-
-        #for triangle in prisim.mesh_triangles:
-        #    self.world.add_triangle(triangle)
-
-        #for triangle in prisim2.mesh_triangles:
-        #    self.world.add_triangle(triangle)
-
-        for triangle in self.robot.mesh_triangles:
-            self.world.add_triangle(triangle)
-
-        
-        #skybox = Skybox()
-        #for triangle in skybox.mesh_triangles:
-        #    self.world.add_triangle(triangle)
-
-        
-        triangle = Triangle(
-            [[0,2,0],[0,-2,0],[0,0,-2]],[150,150,200]
-            )
-        triangle2 = Triangle(
-            [[8,2,0],[8,-2,0],[8,0,-2]],[250,150,150]
-            )
-        
-        triangle3 = Triangle(
-            [[2,4,0],[6,4,0],[4,4,-2]],[250,150,150]
-            )
-        
-        triangle4 = Triangle(
-            [[2,-4,0],[6,-4,0],[4,-4,-2]],[255,100,150]
-            )
-        
-        triangle5 = Triangle([
-            [1000,0,1000],
-            [-1000,-1000,1000],
-            [-1000,1000,1000]
-        ])
-        
-        #self.world.triangles = []
-
-
-        hall = hallway([0,10,0])
-
-        game_floor = Floor([-16,-16,-1],8)
-
-        #for triangle in hall:
-        #    self.world.add_triangle(triangle)
-
-        for triangle in game_floor.triangles:
-            self.world.add_triangle(triangle)
-        
-        self.world.add_triangle(triangle)
 
 
         
