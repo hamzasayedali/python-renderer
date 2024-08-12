@@ -11,6 +11,7 @@ import models as models
 from game_objs import Camera, World, Triangle, Prisim, Robot, Skybox, PointGridPlane, MenuButton, MenuBackground, hallway, Floor, Boat, ArmControlGui, Block, TextBox, Octahedron, Tetrahedron, Icosahedron, ObjFile, Player, Coin
 
 from render_funcs import CameraDetails
+
 import constants
 
 class Engine:
@@ -31,8 +32,6 @@ class Engine:
         self.profiler_functions = []
         self.profiler_job_count = []
         self.profiler_times = []
-
-        
 
         # store all the buttons that are on the screen currently, 
         # can loop through when the mouse is clicked to check for collisions and trigger the required functions.
